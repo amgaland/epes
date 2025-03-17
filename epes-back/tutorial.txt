@@ -1,0 +1,13 @@
+when running docker
+
+docker compose up -d db
+
+docker ps -a
+
+check on dbeaver
+
+docker compose build
+
+docker images
+
+docker compose up app
