@@ -1,6 +1,7 @@
 package config
 
 import (
+	"database/sql"
 	"fmt"
 	"log"
 	"os"
@@ -11,39 +12,32 @@ import (
 )
 
 var DB *gorm.DB
+var sqlDB *sql.DB
 
 func ConnectDatabase() {
-    dbHost := os.Getenv("DB_HOST")
-    dbUser := os.Getenv("DB_USER")
-    dbPassword := os.Getenv("DB_PASSWORD")
-    dbName := os.Getenv("DB_NAME")
-    dbPort := os.Getenv("DB_PORT")
+	var err error
+	dsn := fmt.Sprintf("postgres://%s:%s@%s:%s/%s?sslmode=disable",
+		os.Getenv("DB_USER"),
+		os.Getenv("DB_PASSWORD"),
+		os.Getenv("DB_HOST"),
+		os.Getenv("DB_PORT"),
+		os.Getenv("DB_NAME"))
+	DB, err = gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	if err != nil {
+		log.Fatal("Failed to connect to the database:", err)
+	}
 
-    log.Printf("Attempting to connect with: host=%s, user=%s, dbname=%s, port=%s", 
-        dbHost, dbUser, dbName, dbPort)
+	sqlDB, err = DB.DB()
+	if err != nil {
+		log.Fatal("Failed to get sql.DB from gorm.DB:", err)
+	}
 
-    dsn := fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable",
-        dbHost, dbUser, dbPassword, dbName, dbPort)
-
-    db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
-    if err != nil {
-        log.Fatalf("Failed to connect to database: %v", err)
-    }
-
-    // Test the connection
-    sqlDB, err := db.DB()
-    if err != nil {
-        log.Fatalf("Failed to get database instance: %v", err)
-    }
-    if err := sqlDB.Ping(); err != nil {
-        log.Fatalf("Failed to ping database: %v", err)
-    }
-
-    // Auto migrate models
-    if err := db.AutoMigrate(&models.User{}); err != nil {
-        log.Fatalf("Failed to auto migrate: %v", err)
-    }
-
-    DB = db
-    log.Println("Database connected and migrated successfully")
+	if err = sqlDB.Ping(); err != nil {
+		log.Fatal("Database connection is not active:", err)
+	}
+	DB.AutoMigrate(&models.User{})
+	DB.AutoMigrate(&models.ActionType{})
+	DB.AutoMigrate(&models.RolePermission{})
+	DB.AutoMigrate(&models.Role{})
+	DB.AutoMigrate(&models.UserRole{})
 }
