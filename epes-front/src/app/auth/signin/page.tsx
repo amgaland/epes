@@ -17,7 +17,7 @@ export default function AuthenticationPage() {
             <Image
               priority
               alt="Logo"
-              src={"/light/epes.png"}
+              src={"/light/1.png"}
               height={80}
               width={120}
             />

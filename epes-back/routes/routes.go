@@ -61,12 +61,5 @@ func RegisterRoutes(router *gin.Engine) {
             actionTypeRoutes.PUT("/:id", admin.UpdateActionType)
             actionTypeRoutes.DELETE("/:id", admin.DeleteActionType)
         }
-
-        // Evaluation Routes (Missing in your snippet)
-        evaluationRoutes := adminRoutes.Group("/evaluations")
-        {
-            evaluationRoutes.GET("/", admin.GetEvaluations)
-            evaluationRoutes.POST("/", admin.UpdateEvaluation)
-        }
     }
 }

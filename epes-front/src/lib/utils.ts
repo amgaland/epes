@@ -7,7 +7,7 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 export function constructMetadata({
-  title = "EPES | Admin",
+  title = "ONDO | Branch Admin",
   description = "Монголын үүрэн холбооны оператор, Mongolian telecommunication group.",
   image = "/favicon.png",
   icons = "/favicon.png",
