@@ -12,7 +12,7 @@ export const request = async (
     throw new Error("Unauthorized: No token provided.");
   }
 
-  const url = `${process.env.NEXT_PUBLIC_BRANCH_SERVICE}${route}`;
+  const url = `${process.env.NEXT_PUBLIC_EPES_SERVICE}${route}`;
 
   try {
     const config: AxiosRequestConfig = {

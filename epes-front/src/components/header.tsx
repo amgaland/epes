@@ -28,7 +28,7 @@ export const Header = () => {
         <Image
           priority
           alt="Logo here"
-          src={"/light/ondo.png"}
+          src={"/light/epes.png"}
           height={40}
           width={80}
           style={{ width: "auto", height: "auto" }}

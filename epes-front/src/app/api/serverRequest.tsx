@@ -6,7 +6,7 @@ export const serverRequest = async (
   body?: any,
   params?: any
 ) => {
-  const url = `${process.env.NEXT_PUBLIC_BRANCH_SERVICE}${route}`;
+  const url = `${process.env.NEXT_PUBLIC_EPES_SERVICE}${route}`;
 
   try {
     const config: AxiosRequestConfig = {

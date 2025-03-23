@@ -2,127 +2,128 @@
 import { useState } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import LottiePlayer from "@/components/lottie-player";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { toast } from "@/hooks/use-toast";
-import { useRequireAuth } from "@/lib/checkAuth";
-import { validateRegisterNumber } from "@/lib/utils";
-import { req } from "./api";
-import loading from "@/../public/lottie/round-loading.json";
-import { Settings } from "lucide-react";
 import { Card } from "@/components/ui/card";
 import Image from "next/image";
 import { Header } from "@/components/header";
+import { useRequireAuth } from "@/lib/checkAuth";
+import { BarChart2, FileText, Users, Award } from "lucide-react";
 
 export default function Home() {
   useRequireAuth();
   const router = useRouter();
   const { data: session } = useSession();
-  const token = session?.user.token;
-  const [inputValue, setInputValue] = useState("");
+  const roles = session?.user.roles || []; // Default to empty array if undefined
+  const isAdmin = roles.includes("admin"); // Check if "admin" is in roles
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSearch = async () => {
-    if (!validateRegisterNumber(inputValue)) {
-      toast({
-        title: "Зөв регистрийн дугаар оруулна уу.",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Admin (HR/Manager) specific cards
+  const adminCards = [
+    {
+      alt: "evaluate-employee",
+      src: "/icons/evaluate.png",
+      label: "Evaluate Employee",
+      route: "/evaluation/new",
+      icon: <FileText />,
+    },
+    {
+      alt: "view-reports",
+      src: "/icons/reports.png",
+      label: "View Reports",
+      route: "/reports",
+      icon: <BarChart2 />,
+    },
+    {
+      alt: "manage-employees",
+      src: "/icons/users.png",
+      label: "Manage Employees",
+      route: "/employees",
+      icon: <Users />,
+    },
+  ];
 
-    if (!token) {
-      toast({
-        title: "Unauthorized",
-        description: "Хэрэглэгчийн токен байхгүй байна.",
-        variant: "destructive",
-      });
-      return;
-    }
+  // Employee-specific cards
+  const employeeCards = [
+    {
+      alt: "view-evaluation",
+      src: "/icons/my-eval.png",
+      label: "My Evaluations",
+      route: "/employee/evaluations",
+      icon: <FileText />,
+    },
+    {
+      alt: "performance-stats",
+      src: "/icons/stats.png",
+      label: "Performance Stats",
+      route: "/employee/stats",
+      icon: <BarChart2 />,
+    },
+    {
+      alt: "achievements",
+      src: "/icons/achievements.png",
+      label: "Achievements",
+      route: "/employee/achievements",
+      icon: <Award />,
+    },
+  ];
 
-    try {
-      setIsLoading(true);
-      const data = await req.GET("/billing/check-user", token, {
-        registerNumber: inputValue,
-      });
-
-      if (data.message === "user_found") {
-        router.push(`/client/user-detail?registerNumber=${inputValue}`);
-      }
-      if (data.message === "user_not_found") {
-        toast({ title: "Хэрэглэгч бүртгэлгүй байна." });
-        router.push(`/client/register-user?registerNumber=${inputValue}`);
-      }
-    } catch (error) {
-      toast({
-        title: "Алдаа гарлаа",
-        description: "Сервертэй холбогдоход алдаа гарлаа.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  // Determine which cards to show based on role
+  const displayCards = isAdmin ? adminCards : employeeCards;
 
   return (
     <>
       <Header />
-      <div className="h-screen bg-white dark:bg-black flex items-center justify-center">
+      <div className="min-h-screen bg-gray-100 dark:bg-gray-900 flex items-center justify-center">
         <div className="container mx-auto px-4 py-8">
-          <div className="flex flex-col items-center">
-            <div className="flex items-center border-b border-gray-300 pb-4">
-              <Input
-                type="text"
-                placeholder="Регистрийн дугаар"
-                className="border border-gray-300 rounded-lg px-4 py-2 mr-2"
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && handleSearch()}
-              />
-              <Button
-                disabled={isLoading}
-                variant="secondary"
-                className="rounded-lg flex items-center"
-                onClick={handleSearch}
-              >
-                {isLoading ? (
-                  <LottiePlayer width={120} animation={loading} />
-                ) : (
-                  <>
-                    <Settings className="mr-2" />
-                    Хайх
-                  </>
-                )}
-              </Button>
-            </div>
+          <div className="flex flex-col items-center mb-8">
+            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
+              {isAdmin
+                ? "Performance Management Dashboard"
+                : "My Performance Dashboard"}
+            </h1>
+            <p className="text-gray-600 dark:text-gray-300 mt-2">
+              {isAdmin
+                ? "Manage employee evaluations and track performance."
+                : "View your performance evaluations and achievements."}
+            </p>
           </div>
 
-          {/* <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 mt-8 font-bold">
-            {[
-              { alt: "create-user", src: "/icons/create-user.png", label: "Хэрэглэгч бүртгэх", route: "/client/register/user" },
-              { alt: "data-charge", src: "/icons/data-charge.png", label: "Дата цэнэглэх", route: "#" },
-              { alt: "call-charge", src: "/icons/call-charge.png", label: "Яриа цэнэглэх", route: "#" },
-              { alt: "assign-number", src: "/icons/assign-number.png", label: "Дугаар авах", route: "#" },
-              { alt: "recover-sim", src: "/icons/recover-sim.png", label: "Сим сэргээх", route: "#" },
-              { alt: "activate-call", src: "/icons/activate-call.png", label: "Яриа идэвхжүүлэх", route: "#" },
-            ].map((card) => (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+            {displayCards.map((card) => (
               <Card
                 key={card.alt}
                 onClick={() => router.push(card.route)}
-                className="cursor-pointer flex flex-col items-center p-4"
+                className="cursor-pointer flex flex-col items-center p-6 bg-white dark:bg-gray-800 shadow-md hover:shadow-lg transition-shadow"
               >
+                <div className="mb-4 text-gray-700 dark:text-gray-200">
+                  {card.icon}
+                </div>
                 <Image
-                  className="bg-black rounded-full p-1"
+                  className="rounded-full p-1 bg-gray-200 dark:bg-gray-700"
                   alt={card.alt}
                   src={card.src}
-                  width={40}
-                  height={40}
+                  width={50}
+                  height={50}
                 />
-                <span>{card.label}</span>
+                <span className="mt-4 font-semibold text-gray-800 dark:text-white">
+                  {card.label}
+                </span>
               </Card>
             ))}
-          </div> */}
+          </div>
+
+          {isAdmin && (
+            <div className="mt-10 text-center">
+              <Button
+                onClick={() => router.push("/admin/export")}
+                variant="outline"
+                className="flex items-center gap-2"
+              >
+                <FileText className="h-4 w-4" />
+                Export Performance Data
+              </Button>
+            </div>
+          )}
         </div>
       </div>
     </>

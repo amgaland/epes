@@ -1,10 +1,19 @@
-import Lottie from "lottie-react";
+// src/components/lottie-player.tsx
+import dynamic from "next/dynamic";
+
+const Lottie = dynamic(() => import("lottie-react"), { ssr: false });
+
+interface LottiePlayerProps {
+  animation: any;
+  width?: string | number;
+  height?: string | number;
+}
 
 export default function LottiePlayer({
   animation,
   width = "auto",
   height = "auto",
-}: any) {
+}: LottiePlayerProps) {
   return (
     <div className="flex flex-col w-full justify-center items-center">
       <Lottie
