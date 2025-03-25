@@ -159,7 +159,9 @@ export default function Page() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuItem
                                 onClick={() =>
-                                  router.push(`/admin/user/edit?id=${user.id}`)
+                                  router.push(
+                                    `/protected/user/edit?id=${user.id}`
+                                  )
                                 }
                               >
                                 Засах

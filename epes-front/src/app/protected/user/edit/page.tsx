@@ -60,7 +60,7 @@ export default function UserFormPage() {
       try {
         setLoading(true);
         const response = await req.GET(
-          `/protected/users?id=${id}`,
+          `/admin/users?id=${id}`,
           session.user.token
         );
         setFormData({
@@ -95,7 +95,7 @@ export default function UserFormPage() {
     try {
       setLoading(true);
       const response = await req.PUT(
-        `/protected/users/${id || ""}`,
+        `/admin/users/${id || ""}`,
         session?.user?.token || "",
         {
           ...formData,

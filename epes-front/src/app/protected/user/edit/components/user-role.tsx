@@ -53,7 +53,7 @@ const UserRole = ({ userId }: { userId?: string }) => {
 
       try {
         const response = await req.GET(
-          `/protected/user/roles/list?user_id=${userId}`,
+          `/admin/user/roles/list?user_id=${userId}`,
           session.user.token
         );
         setUserRoles(response);
@@ -85,7 +85,7 @@ const UserRole = ({ userId }: { userId?: string }) => {
         }
 
         await req.PUT(
-          `/protected/user/roles/update`,
+          `/admin/user/roles/update`,
           session.user.token,
           JSON.stringify({
             active: active === true,

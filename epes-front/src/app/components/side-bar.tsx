@@ -47,7 +47,9 @@ interface NavLink {
 // Role permissions
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: [
-    "dashboard",
+    "dashboardadmin",
+    "dashboardmanager",
+    "dashboardemployee",
     "users",
     "branch",
     "role",
@@ -55,12 +57,13 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "document",
     "action-history",
   ],
-  manager: ["dashboard", "branch", "document"],
+  manager: ["dashboardmanager", "users", "document", "projects", "tasks"],
+  employee: ["dashboardEmployee", "projects", "tasks"],
 };
 
 const ProfileSection: React.FC<{ profile: UserProfile }> = ({ profile }) => {
   const fullName = `${profile?.lastname?.[0] || ""}.${profile?.firstname || ""}`;
-  const email = profile?.emailWork || "";
+  const role = profile?.roles || "";
 
   return (
     <DropdownMenu>
@@ -69,7 +72,7 @@ const ProfileSection: React.FC<{ profile: UserProfile }> = ({ profile }) => {
           <User />
           <div className="ml-2">
             <h1 className="font-semibold text-sm">{fullName}</h1>
-            <p className="font-thin text-xs text-muted-foreground">{email}</p>
+            <p className="font-thin text-xs text-muted-foreground">{role}</p>
           </div>
         </div>
       </DropdownMenuTrigger>
@@ -87,16 +90,40 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
 }) => {
   const navLinks: NavLink[] = [
     {
-      title: "Dashboard",
-      href: "/",
+      title: "Admin Dashboard",
+      href: "/protected/dashboardAdmin",
       icon: LayoutDashboard,
-      permission: "dashboard",
+      permission: "dashboardadmin",
+    },
+    {
+      title: "Manager Dashboard",
+      href: "/protected/dashboardManager",
+      icon: LayoutDashboard,
+      permission: "dashboardmanager",
+    },
+    {
+      title: "Employee Dashboard",
+      href: "/protected/dashboardEmployee",
+      icon: LayoutDashboard,
+      permission: "dashboardemployee",
     },
     {
       title: "Users",
       href: "/protected/user",
       icon: Users,
       permission: "users",
+    },
+    {
+      title: "Projects",
+      href: "/protected/project",
+      icon: ListCheck,
+      permission: "projects",
+    },
+    {
+      title: "Tasks",
+      href: "/protected/task",
+      icon: ListCheck,
+      permission: "tasks",
     },
     {
       title: "Салбар",
@@ -172,7 +199,7 @@ const SideBar: React.FC = () => {
 
   return (
     <div className="h-screen flex flex-col justify-between px-2 py-4 w-[220px] bg-background dark:bg-background-dark">
-      <div className="mt-6">
+      <div className="mt-6 ">
         <Navigation roles={userRoles} />
       </div>
       <div className="space-y-4">
