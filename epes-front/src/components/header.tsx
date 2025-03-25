@@ -48,7 +48,7 @@ export const Header = () => {
           </DropdownMenuTrigger>
           <DropdownMenuContent>
             {isAdmin && (
-              <DropdownMenuItem onClick={() => router.push("/admin")}>
+              <DropdownMenuItem onClick={() => router.push("/protected")}>
                 Админ
               </DropdownMenuItem>
             )}
