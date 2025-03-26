@@ -25,14 +25,15 @@ export const Header = () => {
   return (
     <header className="absolute flex w-full items-center justify-between bg-black text-white max-h-12 py-2 px-12">
       <Link href="/">
-        <Image
+        {/* <Image
           priority
           alt="Logo here"
           src={"/light/epes.png"}
           height={40}
           width={80}
           style={{ width: "auto", height: "auto" }}
-        />
+        /> */}
+        <h1>"EPES"</h1>
       </Link>
       <div className="flex items-center space-x-6">
         <ModeToggle />

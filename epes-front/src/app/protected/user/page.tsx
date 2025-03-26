@@ -81,7 +81,7 @@ export default function Page() {
               className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
             />
           </div>
-          <Button onClick={() => router.push("/admin/user/create")}>
+          <Button onClick={() => router.push("/protected/user/create")}>
             <CirclePlus />
             Нэмэх
           </Button>

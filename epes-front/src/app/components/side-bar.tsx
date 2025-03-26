@@ -56,6 +56,9 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "action",
     "document",
     "action-history",
+    "projects",
+    "tasks",
+    "kpi",
   ],
   manager: ["dashboardmanager", "users", "document", "projects", "tasks"],
   employee: ["dashboardEmployee", "projects", "tasks"],
@@ -154,6 +157,12 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
       href: "/protected/action-history",
       icon: NotebookPen,
       permission: "action-history",
+    },
+    {
+      title: "KPI",
+      href: "/protected/kpi",
+      icon: NotebookPen,
+      permission: "kpi",
     },
   ];
 
