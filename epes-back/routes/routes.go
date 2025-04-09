@@ -4,6 +4,7 @@ import (
 	"github.com/amgaland/epes/epes-back/controllers"
 	admin "github.com/amgaland/epes/epes-back/controllers/admin"
 	api "github.com/amgaland/epes/epes-back/controllers/api"
+	protected "github.com/amgaland/epes/epes-back/controllers/protected"
 	"github.com/gin-gonic/gin"
 )
 
@@ -62,4 +63,16 @@ func RegisterRoutes(router *gin.Engine) {
             actionTypeRoutes.DELETE("/:id", admin.DeleteActionType)
         }
     }
+
+    protectedRoutes := router.Group("/protected")
+    {
+        departmentRoutes := protectedRoutes.Group("/departments")
+        {
+            departmentRoutes.GET("/", protected.GetAllDepartments)
+            departmentRoutes.POST("/", protected.CreateDepartment)
+            departmentRoutes.PUT("/:id", protected.UpdateDepartment)
+            departmentRoutes.DELETE("/:id", protected.DeleteDepartment)
+        }
+    }
+
 }

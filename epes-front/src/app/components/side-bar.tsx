@@ -59,6 +59,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "projects",
     "tasks",
     "kpi",
+    "department",
   ],
   manager: ["dashboardmanager", "users", "document", "projects", "tasks"],
   employee: ["dashboardEmployee", "projects", "tasks"],
@@ -163,6 +164,12 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
       href: "/protected/kpi",
       icon: NotebookPen,
       permission: "kpi",
+    },
+    {
+      title: "Deparments",
+      href: "/protected/department",
+      icon: NotebookPen,
+      permission: "department",
     },
   ];
 

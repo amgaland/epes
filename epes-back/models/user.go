@@ -3,18 +3,20 @@ package models
 import "time"
 
 type User struct {
-	Model
-	FirstName           string     `json:"first_name"`
-	LastName            string     `json:"last_name"`
-	LoginID             string     `json:"login_id" gorm:"unique"`
-	EmailWork           string     `json:"email_work"`
-	EmailPersonal       *string    `json:"email_personal"`
-	PhoneNumberWork     *string    `json:"phone_number_work"`
-	PhoneNumberPersonal *string    `json:"phone_number_personal"`
-	IsActive            *bool      `json:"is_active"`
-	ActiveStartDate     time.Time  `json:"active_start_date"`
-	ActiveEndDate       *time.Time `json:"active_end_date"`
-	Password            string     `json:"password"`
+	Model   
+	FirstName           string        `json:"first_name"`
+	LastName            string        `json:"last_name"`
+	LoginID             string        `json:"login_id" gorm:"unique"`
+	EmailWork           string        `json:"email_work"`
+	EmailPersonal       *string       `json:"email_personal"`
+	PhoneNumberWork     *string       `json:"phone_number_work"`
+	PhoneNumberPersonal *string       `json:"phone_number_personal"`
+	IsActive            *bool         `json:"is_active"`
+	ActiveStartDate     time.Time     `json:"active_start_date"`
+	ActiveEndDate       *time.Time    `json:"active_end_date"`
+	DepartmentID        string        `json:"department_id"`
+    Department          Department    `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
+	Password            string        `json:"password"`
 }
 
 type LoginUser struct {

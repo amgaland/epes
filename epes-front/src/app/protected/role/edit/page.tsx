@@ -37,7 +37,7 @@ export default function RoleFormPage() {
       try {
         setLoading(true);
         const response = await req.GET(
-          `/protected/roles?id=${id}`,
+          `/admin/roles?id=${id}`,
           session?.user.token
         );
         setFormData({
@@ -71,7 +71,7 @@ export default function RoleFormPage() {
     try {
       setLoading(true);
       const response = await req.PUT(
-        `/protected/roles/${id || ""}`,
+        `/admin/roles/${id || ""}`,
         session?.user?.token || "",
         formData
       );

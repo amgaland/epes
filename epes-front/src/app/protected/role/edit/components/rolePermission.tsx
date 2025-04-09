@@ -49,7 +49,7 @@ const RolePermission = ({ roleID }: { roleID?: string }) => {
 
       try {
         const response = await req.GET(
-          `/protected/role-permissions/list?role_id=${roleID}`,
+          `/admin/role-permissions/list?role_id=${roleID}`,
           session.user.token
         );
         console.log("Fetched permissions:", response);
@@ -92,7 +92,7 @@ const RolePermission = ({ roleID }: { roleID?: string }) => {
         }
 
         await req.PUT(
-          `/protected/role-permissions/update`,
+          `/admin/role-permissions/update`,
           session.user.token,
           JSON.stringify({
             permission,
