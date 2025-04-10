@@ -10,6 +10,7 @@ import { req } from "@/app/api";
 import { useSession } from "next-auth/react";
 import { DatePickerWithRange } from "@/components/date-range-picker";
 import UserRole from "./components/user-role";
+import UserDepartments from "./components/user-department";
 
 interface UserFormData {
   first_name: string;
@@ -299,6 +300,7 @@ export default function UserFormPage() {
               </div>
             </div>
             <UserRole userId={id!} />
+            <UserDepartments userId={id!} />
             <div>
               <Button type="submit" className="w-full" disabled={loading}>
                 {loading ? "Уншиж байна..." : id ? "Засах" : "Нэмэх"}

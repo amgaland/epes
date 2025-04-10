@@ -80,6 +80,7 @@ func RegisterRoutes(router *gin.Engine) {
             userDepartmentRoutes.POST("/", protected.CreateUserDepartment)
             userDepartmentRoutes.PUT("/:id", protected.UpdateUserDepartment)
             userDepartmentRoutes.DELETE("/:id", protected.DeleteUserDepartment)
+            userDepartmentRoutes.GET("/list", protected.UserDepartmentHandler)
             userDepartmentRoutes.PUT("/update", protected.UpdateUserDepartmentHandler)
         }
     }

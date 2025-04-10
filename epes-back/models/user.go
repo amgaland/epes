@@ -38,4 +38,5 @@ type UserWithRoles struct {
 	ActiveStartDate     time.Time  `json:"active_start_date"`
 	ActiveEndDate       *time.Time `json:"active_end_date,omitempty"`
 	Roles               string     `json:"roles"`
+	Department 		    string     `json:"department"`
 }

@@ -5,7 +5,7 @@ type UserDepartment struct {
 	UserID    string    `json:"user_id"`
 	User      User      `json:"user" gorm:"foreignKey:UserID;references:ID"`
 	DepartmentID    string    `json:"department_id"`
-	Department      Role      `json:"department" gorm:"foreignKey:DepartmentID;references:ID"`
+	Department      Department      `json:"department" gorm:"foreignKey:DepartmentID;references:ID"`
 	DepartmentName  string    `json:"department_name"`
 }
 
