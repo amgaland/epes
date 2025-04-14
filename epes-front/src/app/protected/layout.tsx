@@ -1,6 +1,6 @@
 "use client";
 import { useRequireAuth } from "@/lib/checkAuth";
-import SideBar from "../components/side-bar";
+import SideBar from "../../components/side-bar";
 import { Header } from "@/components/header";
 
 export default function RootLayout({

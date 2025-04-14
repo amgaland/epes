@@ -12,6 +12,7 @@ declare module "next-auth/jwt" {
     emailWork: string;
     phoneNumberPersonal: string;
     phoneNumberWork: string;
+    deparmtent: string;
   }
 }
 
@@ -28,6 +29,7 @@ declare module "next-auth" {
       emailWork: string;
       phoneNumberPersonal: string;
       phoneNumberWork: string;
+      department: string;
     };
   }
 }

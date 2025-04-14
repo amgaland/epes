@@ -8,7 +8,7 @@ import Image from "next/image";
 import { Header } from "@/components/header";
 import { useRequireAuth } from "@/lib/checkAuth";
 import { BarChart2, FileText, Users, Award } from "lucide-react";
-import SideBar from "./components/side-bar";
+import SideBar from "../components/side-bar";
 
 export default function Home() {
   useRequireAuth();

@@ -1,7 +1,8 @@
 "use client";
+
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { req } from "@/app/api";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -31,6 +32,7 @@ interface ProjectMember {
 }
 
 interface ProjectForm {
+  id?: string;
   name: string;
   description: string;
   start_date: string;
@@ -49,9 +51,12 @@ interface FormErrors {
   team_members?: string;
 }
 
-const CreateProjectPage: React.FC = () => {
+const EditProjectPage: React.FC = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
+  const params = useParams();
+  const projectId = params.id as string;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
@@ -67,9 +72,8 @@ const CreateProjectPage: React.FC = () => {
   const [errors, setErrors] = useState<FormErrors>({});
 
   useEffect(() => {
-    const fetchUsers = async () => {
+    const fetchUsersAndProject = async () => {
       if (!session?.user?.token) {
-        console.error("No token available in session:", session);
         alert("Authentication token missing. Please log in again.");
         router.push("/login");
         return;
@@ -77,8 +81,10 @@ const CreateProjectPage: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const response = await req.GET("/admin/users", session.user.token);
-        const mappedUsers: User[] = response.map((u: any) => ({
+
+        // Fetch users
+        const usersResponse = await req.GET("/admin/users", session.user.token);
+        const mappedUsers: User[] = usersResponse.map((u: any) => ({
           id: u.id,
           name:
             `${u.firstname || u.first_name || ""} ${u.lastname || u.last_name || ""}`.trim() ||
@@ -86,9 +92,37 @@ const CreateProjectPage: React.FC = () => {
             u.id,
         }));
         setUsers(mappedUsers);
+
+        // Fetch project details
+        if (projectId) {
+          const projectResponse = await req.GET(
+            `/protected/projects?id=${projectId}`,
+            session.user.token
+          );
+          const projectData = projectResponse;
+          setForm({
+            id: projectData.id,
+            name: projectData.name,
+            description: projectData.description || "",
+            start_date: new Date(projectData.start_date)
+              .toISOString()
+              .split("T")[0],
+            end_date: projectData.end_date
+              ? new Date(projectData.end_date).toISOString().split("T")[0]
+              : "",
+            status: projectData.status,
+            owner_id: projectData.owner_id,
+            team_members: projectData.team_members.map((m: any) => ({
+              user_id: m.user_id,
+              role_in_project: m.role_in_project,
+              name:
+                mappedUsers.find((u) => u.id === m.user_id)?.name || m.user_id,
+            })),
+          });
+        }
       } catch (error: any) {
-        console.error("Failed to fetch users:", error);
-        alert("Failed to load users: " + error.message);
+        console.error("Failed to fetch data:", error);
+        alert("Failed to load data: " + error.message);
         setUsers([
           { id: "123e4567-e89b-12d3-a456-426614174000", name: "John Doe" },
           { id: "223e4567-e89b-12d3-a456-426614174001", name: "Jane Smith" },
@@ -98,15 +132,14 @@ const CreateProjectPage: React.FC = () => {
       }
     };
 
-    if (session) {
-      console.log("Session:", session);
-      fetchUsers();
+    if (session && projectId) {
+      fetchUsersAndProject();
       setForm((prev) => ({
         ...prev,
         owner_id: session.user.id,
       }));
     }
-  }, [session, router]);
+  }, [session, projectId, router]);
 
   if (status === "loading") {
     return (
@@ -198,6 +231,7 @@ const CreateProjectPage: React.FC = () => {
     setIsSubmitting(true);
     try {
       const payload = {
+        id: form.id,
         name: form.name,
         description: form.description,
         start_date: new Date(form.start_date).toISOString(),
@@ -210,12 +244,16 @@ const CreateProjectPage: React.FC = () => {
         })),
       };
 
-      await req.POST("/protected/projects", session.user.token, payload);
-      alert("Project created successfully");
+      await req.PUT(
+        `/protected/projects/${projectId}`,
+        session.user.token,
+        payload
+      );
+      alert("Project updated successfully");
       router.push("/protected/project");
     } catch (error: any) {
-      console.error("Failed to create project:", error);
-      alert("Failed to create project: " + error.message);
+      console.error("Failed to update project:", error);
+      alert("Failed to update project: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
@@ -226,7 +264,7 @@ const CreateProjectPage: React.FC = () => {
       <div className="flex-1 flex flex-col">
         <main className="p-6 flex-1">
           <h1 className="text-3xl font-bold tracking-tight mb-6">
-            Create New Project
+            Edit Project
           </h1>
 
           <Card>
@@ -445,7 +483,7 @@ const CreateProjectPage: React.FC = () => {
                       Cancel
                     </Button>
                     <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Creating..." : "Create Project"}
+                      {isSubmitting ? "Updating..." : "Update Project"}
                     </Button>
                   </div>
                 </form>
@@ -458,4 +496,4 @@ const CreateProjectPage: React.FC = () => {
   );
 };
 
-export default CreateProjectPage;
+export default EditProjectPage;
