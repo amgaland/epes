@@ -1,11 +1,11 @@
+// src/app/protected/task/view/[id]/page.tsx
 "use client";
-
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
 import { req } from "@/app/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Edit, Clock, Users, Calendar, Folder } from "lucide-react";
@@ -16,49 +16,15 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
+import { useToast } from "@/hooks/use-toast";
+import { Task, TaskResponse } from "../../types";
 
-interface User {
-  user_id: string;
-  first_name: string;
-  last_name: string;
-}
-
-interface Project {
-  id: string;
-  name: string;
-}
-
-interface TaskResponse {
-  id: string;
-  title: string;
-  description: string | null;
-  status: "Pending" | "In Progress" | "Completed";
-  deadline: string | null;
-  assigned_to: {
-    id: string;
-    first_name: string;
-    last_name: string;
-  } | null;
-  priority: "Low" | "Medium" | "High";
-  project_id: string | null;
-}
-
-interface Task {
-  id: string;
-  title: string;
-  description: string | null;
-  status: "Pending" | "In Progress" | "Completed";
-  dueDate: string;
-  assignedTo: User | null;
-  priority: "Low" | "Medium" | "High";
-  project: Project | null;
-}
-
-const TaskViewPage: React.FC = () => {
+export default function TaskViewPage() {
   const { data: session, status } = useSession();
   const router = useRouter();
   const params = useParams();
   const taskId = params.id as string;
+  const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -66,8 +32,11 @@ const TaskViewPage: React.FC = () => {
   useEffect(() => {
     const fetchTask = async () => {
       if (!session?.user?.token) {
-        console.error("No token available in session:", session);
-        alert("Authentication token missing. Please log in again.");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Authentication token missing. Please log in again.",
+        });
         router.push("/login");
         return;
       }
@@ -80,47 +49,23 @@ const TaskViewPage: React.FC = () => {
 
       try {
         setIsLoading(true);
-
-        // Fetch task details
         const taskResponse: TaskResponse = await req.GET(
           `/protected/tasks?id=${taskId}`,
           session.user.token
         );
-        console.log("Task fetched:", JSON.stringify(taskResponse, null, 2));
 
-        // Map assigned_to directly
-        const assignedTo: User | null = taskResponse.assigned_to
-          ? {
-              user_id: taskResponse.assigned_to.id,
-              first_name: taskResponse.assigned_to.first_name || "Unassigned",
-              last_name: taskResponse.assigned_to.last_name || "",
-            }
-          : null;
-
-        // Fetch project details if project_id exists
-        let project: Project | null = null;
+        let project = null;
         if (taskResponse.project_id) {
           try {
             const projectResponse = await req.GET(
               `/protected/projects?id=${taskResponse.project_id}`,
               session.user.token
             );
-            console.log(
-              `Project fetched for ID ${taskResponse.project_id}:`,
-              JSON.stringify(projectResponse, null, 2)
-            );
             project = {
               id: taskResponse.project_id,
-              name:
-                projectResponse.name ||
-                projectResponse.title ||
-                "Unnamed Project",
+              name: projectResponse.name || "Unnamed Project",
             };
           } catch (projectError: any) {
-            console.error(
-              `Failed to fetch project ${taskResponse.project_id}:`,
-              projectError.message
-            );
             project = {
               id: taskResponse.project_id,
               name: "Unnamed Project",
@@ -128,7 +73,6 @@ const TaskViewPage: React.FC = () => {
           }
         }
 
-        // Validate and format deadline
         let formattedDueDate = "N/A";
         if (taskResponse.deadline) {
           const parsedDate = new Date(taskResponse.deadline);
@@ -143,14 +87,19 @@ const TaskViewPage: React.FC = () => {
           description: taskResponse.description || null,
           status: taskResponse.status,
           dueDate: formattedDueDate,
-          assignedTo,
+          assignedTo: taskResponse.assigned_to
+            ? {
+                id: taskResponse.assigned_to.id,
+                first_name: taskResponse.assigned_to.first_name || "Unassigned",
+                last_name: taskResponse.assigned_to.last_name || "",
+              }
+            : null,
           priority: taskResponse.priority || "Low",
           project,
         };
 
         setTask(mappedTask);
       } catch (error: any) {
-        console.error("Failed to fetch task:", error);
         setError(`Failed to load task: ${error.message}`);
       } finally {
         setIsLoading(false);
@@ -160,7 +109,7 @@ const TaskViewPage: React.FC = () => {
     if (session) {
       fetchTask();
     }
-  }, [session, router, taskId]);
+  }, [session, router, taskId, toast]);
 
   const roles = session?.user?.roles
     ? Array.isArray(session.user.roles)
@@ -392,6 +341,4 @@ const TaskViewPage: React.FC = () => {
       </div>
     </TooltipProvider>
   );
-};
-
-export default TaskViewPage;
+}
