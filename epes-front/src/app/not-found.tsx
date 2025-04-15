@@ -15,6 +15,12 @@ export default function NotFound() {
       <Button className="mt-10 gap-x-2" onClick={() => router.push("/")}>
         Нүүр хуудас руу буцах
       </Button>
+      <Button
+        className="mt-10 gap-x-2"
+        onClick={() => router.push("/auth/signin")}
+      >
+        Дахин нэвтрэх
+      </Button>
     </div>
   );
 }

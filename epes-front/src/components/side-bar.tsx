@@ -47,9 +47,7 @@ interface NavLink {
 // Role permissions
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: [
-    "dashboardadmin",
-    "dashboardmanager",
-    "dashboardemployee",
+    "dashboard",
     "users",
     "role",
     "action",
@@ -59,8 +57,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "kpi",
     "department",
   ],
-  manager: ["dashboardmanager", "users", "document", "projects", "tasks"],
-  employee: ["dashboardEmployee", "projects", "tasks"],
+  manager: ["dashboard", "users", "document", "projects", "tasks"],
+  employee: ["dashboard", "projects", "tasks"],
 };
 
 const ProfileSection: React.FC<{ profile: UserProfile }> = ({ profile }) => {
@@ -92,22 +90,10 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
 }) => {
   const navLinks: NavLink[] = [
     {
-      title: "Admin Dashboard",
-      href: "/protected/dashboardAdmin",
+      title: "Dashboard",
+      href: "/protected/dashboard",
       icon: LayoutDashboard,
-      permission: "dashboardadmin",
-    },
-    {
-      title: "Manager Dashboard",
-      href: "/protected/dashboardManager",
-      icon: LayoutDashboard,
-      permission: "dashboardmanager",
-    },
-    {
-      title: "Employee Dashboard",
-      href: "/protected/dashboardEmployee",
-      icon: LayoutDashboard,
-      permission: "dashboardemployee",
+      permission: "dashboard",
     },
     {
       title: "Users",

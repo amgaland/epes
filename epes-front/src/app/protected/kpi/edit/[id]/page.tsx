@@ -1,9 +1,10 @@
+// src/app/protected/kpi/edit/[id]/page.tsx
 "use client";
 
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter, useParams } from "next/navigation";
-import { req } from "@/app/api";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -16,28 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { useToast } from "@/hooks/use-toast";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
-
-interface EmployeeKPI {
-  employeeId: string;
-  employeeName: string;
-  taskCompletionRate: number;
-  tasksCompleted: number;
-  tasksAssigned: number;
-  projectContribution: number;
-  projectsAssigned: number;
-  performanceScore: number;
-  status: "Excellent" | "Good" | "Needs Improvement";
-}
+import { DeleteDialog } from "../../components/DeleteDialog";
+import { fetchKPIById, updateKPI, deleteKPI } from "../../services/kpiService";
+import { EmployeeKPI } from "../../types";
 
 const EditKPIPage: React.FC = () => {
   const { data: session, status } = useSession();
@@ -51,7 +34,7 @@ const EditKPIPage: React.FC = () => {
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   useEffect(() => {
-    const fetchKPI = async () => {
+    const fetchData = async () => {
       if (!session?.user?.token || !params.id) {
         toast({
           title: "Authentication Error",
@@ -64,55 +47,10 @@ const EditKPIPage: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const response = await req.GET(
-          `/protected/kpi?id=${params.id}`,
+        const kpiData = await fetchKPIById(
+          params.id as string,
           session.user.token
         );
-
-        // Assuming API returns task and project data to compute KPIs
-        const tasks = response.tasks || [];
-        const projects = response.projects || [];
-
-        const tasksCompleted = tasks.filter(
-          (t: any) =>
-            t.status === "Completed" &&
-            (t.deadline === null || new Date(t.deadline) >= new Date())
-        ).length;
-        const tasksAssigned = tasks.length;
-        const taskCompletionRate =
-          tasksAssigned > 0 ? (tasksCompleted / tasksAssigned) * 100 : 0;
-
-        const projectContributions = projects.map(
-          (p: any) => p.progress / (p.teamMembers?.length || 1)
-        );
-        const projectContribution =
-          projectContributions.length > 0
-            ? projectContributions.reduce((a: number, b: number) => a + b, 0) /
-              projectContributions.length
-            : 0;
-        const projectsAssigned = projects.length;
-
-        const performanceScore =
-          0.6 * taskCompletionRate + 0.4 * projectContribution;
-        const status: "Excellent" | "Good" | "Needs Improvement" =
-          performanceScore >= 80
-            ? "Excellent"
-            : performanceScore >= 50
-              ? "Good"
-              : "Needs Improvement";
-
-        const kpiData: EmployeeKPI = {
-          employeeId: params.id as string,
-          employeeName: response.employeeName || "Unknown",
-          taskCompletionRate: Math.round(taskCompletionRate),
-          tasksCompleted,
-          tasksAssigned,
-          projectContribution: Math.round(projectContribution),
-          projectsAssigned,
-          performanceScore: Math.round(performanceScore),
-          status,
-        };
-
         setKPI(kpiData);
         setFormData(kpiData);
       } catch (error: any) {
@@ -129,7 +67,7 @@ const EditKPIPage: React.FC = () => {
     };
 
     if (session && params.id) {
-      fetchKPI();
+      fetchData();
     }
   }, [session, params.id, router, toast]);
 
@@ -144,7 +82,7 @@ const EditKPIPage: React.FC = () => {
     const newErrors: { [key: string]: string } = {};
 
     if (
-      !formData.tasksCompleted ||
+      formData.tasksCompleted === undefined ||
       formData.tasksCompleted < 0 ||
       isNaN(formData.tasksCompleted)
     ) {
@@ -152,7 +90,7 @@ const EditKPIPage: React.FC = () => {
         "Tasks completed must be a non-negative number";
     }
     if (
-      !formData.tasksAssigned ||
+      formData.tasksAssigned === undefined ||
       formData.tasksAssigned < 0 ||
       isNaN(formData.tasksAssigned)
     ) {
@@ -166,7 +104,7 @@ const EditKPIPage: React.FC = () => {
       newErrors.tasksCompleted = "Tasks completed cannot exceed tasks assigned";
     }
     if (
-      !formData.projectsAssigned ||
+      formData.projectsAssigned === undefined ||
       formData.projectsAssigned < 0 ||
       isNaN(formData.projectsAssigned)
     ) {
@@ -194,7 +132,7 @@ const EditKPIPage: React.FC = () => {
     const value = e.target.value;
     setFormData((prev) => ({
       ...prev,
-      [field]: value === "" ? "" : parseInt(value),
+      [field]: value === "" ? undefined : parseInt(value),
     }));
   };
 
@@ -213,7 +151,6 @@ const EditKPIPage: React.FC = () => {
       return;
     }
 
-    // Recalculate derived fields
     const taskCompletionRate =
       formData.tasksAssigned && formData.tasksAssigned > 0
         ? (formData.tasksCompleted! / formData.tasksAssigned) * 100
@@ -232,11 +169,7 @@ const EditKPIPage: React.FC = () => {
     };
 
     try {
-      await req.PUT(
-        `/protected/kpi/${params.id}`,
-        JSON.stringify(updatedKPI),
-        session.user.token
-      );
+      await updateKPI(params.id as string, updatedKPI, session.user.token);
       toast({
         title: "Success",
         description: "KPI updated successfully.",
@@ -256,7 +189,7 @@ const EditKPIPage: React.FC = () => {
     if (!session?.user?.token) return;
 
     try {
-      await req.DELETE(`/protected/kpi/${params.id}`, session.user.token);
+      await deleteKPI(params.id as string, session.user.token);
       toast({
         title: "Success",
         description: "KPI deleted successfully.",
@@ -434,29 +367,11 @@ const EditKPIPage: React.FC = () => {
         </CardContent>
       </Card>
 
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirm Deletion</DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete this KPI record? This action
-              cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setDeleteDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button variant="destructive" onClick={handleDelete}>
-              Delete
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <DeleteDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        onConfirm={handleDelete}
+      />
     </div>
   );
 };

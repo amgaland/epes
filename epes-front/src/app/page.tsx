@@ -32,11 +32,11 @@ export default function Home() {
   useEffect(() => {
     if (status === "authenticated" && session) {
       if (isAdmin) {
-        router.push("/protected/dashboardAdmin");
+        router.push("/protected/dashboard");
       } else if (isManager) {
-        router.push("/protected/dashboardManager");
+        router.push("/protected/dashboard");
       } else if (isEmployee) {
-        router.push("/protected/dashboardEmployee");
+        router.push("/protected/dashboard");
       } else {
         // Fallback for users with no recognized roles
         router.push("/unauthorized");
