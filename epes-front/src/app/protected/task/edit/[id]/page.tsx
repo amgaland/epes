@@ -17,13 +17,25 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Save } from "lucide-react";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import { ArrowLeft, Save, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface User {
   id: string;
@@ -44,14 +56,15 @@ interface FormErrors {
   completed_at?: string;
 }
 
-interface TaskPayload {
+interface TaskForm {
+  id?: string;
   project_id: string;
   title: string;
-  description?: string;
+  description: string;
+  assigned_to_id: string;
   status: "Pending" | "In Progress" | "Completed";
-  assigned_to_id?: string;
-  deadline?: string;
-  completed_at?: string;
+  deadline: string;
+  completed_at: string;
 }
 
 const TaskEditPage: React.FC = () => {
@@ -59,16 +72,19 @@ const TaskEditPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
   const taskId = params.id as string;
+  const { toast } = useToast();
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<TaskForm>({
     project_id: "",
     title: "",
     description: "",
     assigned_to_id: "unassigned",
-    status: "Pending" as "Pending" | "In Progress" | "Completed",
+    status: "Pending",
     deadline: "",
     completed_at: "",
   });
@@ -77,25 +93,17 @@ const TaskEditPage: React.FC = () => {
   useEffect(() => {
     const fetchData = async () => {
       if (!session?.user?.token) {
-        alert("Authentication token missing. Please log in again.");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Authentication token missing. Please log in again.",
+        });
         router.push("/login");
-        return;
-      }
-
-      if (!taskId) {
-        setErrors({ title: "Task ID is missing." });
-        setIsLoading(false);
         return;
       }
 
       try {
         setIsLoading(true);
-
-        // Fetch task details
-        const taskResponse = await req.GET(
-          `/protected/tasks/${taskId}`,
-          session.user.token
-        );
 
         // Fetch projects
         const projectResponse = await req.GET(
@@ -117,42 +125,45 @@ const TaskEditPage: React.FC = () => {
         }));
         setUsers(mappedUsers);
 
-        // Pre-populate form with task data
-        setFormData({
-          project_id: taskResponse.project_id || "",
-          title: taskResponse.title || "",
-          description: taskResponse.description || "",
-          assigned_to_id: taskResponse.assigned_to_id || "unassigned",
-          status: taskResponse.status || "Pending",
-          deadline: taskResponse.deadline
-            ? new Date(taskResponse.deadline).toISOString().split("T")[0]
-            : "",
-          completed_at: taskResponse.completed_at
-            ? new Date(taskResponse.completed_at).toISOString().split("T")[0]
-            : "",
-        });
+        // Fetch task data
+        if (taskId) {
+          const taskResponse = await req.GET(
+            `/protected/tasks?id=${taskId}`,
+            session.user.token
+          );
+          const taskData = taskResponse;
+          setFormData({
+            id: taskData.id,
+            project_id: taskData.project_id,
+            title: taskData.title,
+            description: taskData.description || "",
+            assigned_to_id: taskData.assigned_to_id || "unassigned",
+            status: taskData.status,
+            deadline: taskData.deadline
+              ? new Date(taskData.deadline).toISOString().split("T")[0]
+              : "",
+            completed_at: taskData.completed_at
+              ? new Date(taskData.completed_at).toISOString().split("T")[0]
+              : "",
+          });
+        }
       } catch (error: any) {
-        console.error("Failed to fetch data:", error);
-        setErrors({
-          title: "Failed to load task or related data: " + error.message,
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load data: " + error.message,
         });
+        setProjects([]);
+        setUsers([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    if (session) {
+    if (session && taskId) {
       fetchData();
     }
-  }, [session, router, taskId]);
-
-  const roles = session?.user?.roles
-    ? Array.isArray(session.user.roles)
-      ? session.user.roles
-      : [session.user.roles]
-    : [];
-  const isAdmin = roles.includes("ADMIN");
-  const isManager = roles.includes("MANAGER");
+  }, [session, taskId, router, toast]);
 
   const validateForm = () => {
     const newErrors: FormErrors = {};
@@ -188,33 +199,30 @@ const TaskEditPage: React.FC = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setErrors((prev) => ({ ...prev, [name]: undefined }));
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!validateForm()) return;
 
     if (!session?.user?.token) {
-      alert("Authentication token missing. Please log in again.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Authentication token missing. Please log in again.",
+      });
       router.push("/login");
       return;
     }
 
-    const payload: TaskPayload = {
+    const payload = {
+      id: formData.id,
       project_id: formData.project_id,
       title: formData.title,
       description: formData.description || undefined,
-      status: formData.status,
       assigned_to_id:
         formData.assigned_to_id && formData.assigned_to_id !== "unassigned"
           ? formData.assigned_to_id
           : undefined,
+      status: formData.status,
       deadline: formData.deadline
         ? new Date(formData.deadline + "T12:00:00Z").toISOString()
         : undefined,
@@ -229,8 +237,6 @@ const TaskEditPage: React.FC = () => {
       Object.entries(payload).filter(([_, value]) => value !== undefined)
     );
 
-    console.log("Submitting payload:", JSON.stringify(cleanPayload, null, 2));
-
     try {
       setIsSubmitting(true);
       await req.PUT(
@@ -238,27 +244,58 @@ const TaskEditPage: React.FC = () => {
         session.user.token,
         cleanPayload
       );
-      alert("Task updated successfully!");
-      router.push(`/task/view/${taskId}`);
-    } catch (error: any) {
-      console.error("Failed to update task:", {
-        message: error.message,
-        response: error.response?.data,
-        status: error.response?.status,
-        headers: error.response?.headers,
-        request: error.request,
-        config: error.config,
+      toast({
+        title: "Success",
+        description: "Task updated successfully",
       });
-      const errorMessage =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
-        JSON.stringify(error.response?.data) ||
-        error.message ||
-        "Unknown error";
-      setErrors({ title: `Failed to update task: ${errorMessage}` });
+      router.push("/protected/task");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update task: " + error.message,
+      });
     } finally {
       setIsSubmitting(false);
     }
+  };
+
+  const handleDelete = async () => {
+    if (!session?.user?.token) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Authentication token missing. Please log in again.",
+      });
+      router.push("/login");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await req.DELETE(`/protected/tasks/${taskId}`, session.user.token);
+      toast({
+        title: "Success",
+        description: "Task deleted successfully",
+      });
+      router.push("/protected/task");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete task: " + error.message,
+      });
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+    setErrors((prev) => ({ ...prev, [name]: undefined }));
   };
 
   if (status === "loading") {
@@ -277,9 +314,21 @@ const TaskEditPage: React.FC = () => {
     return null;
   }
 
+  const roles = session?.user?.roles
+    ? Array.isArray(session.user.roles)
+      ? session.user.roles
+      : [session.user.roles]
+    : [];
+  const isAdmin = roles.includes("ADMIN");
+  const isManager = roles.includes("MANAGER");
+
   if (!isAdmin && !isManager) {
-    alert("You do not have permission to edit tasks.");
-    router.push(`/task/view/${taskId}`);
+    toast({
+      variant: "destructive",
+      title: "Error",
+      description: "You do not have permission to edit tasks.",
+    });
+    router.push("/protected/task");
     return null;
   }
 
@@ -294,13 +343,14 @@ const TaskEditPage: React.FC = () => {
                   <Button
                     variant="outline"
                     size="icon"
-                    onClick={() => router.push(`/task/view/${taskId}`)}
+                    onClick={() => router.push("/protected/task")}
                     className="hover:bg-muted"
+                    disabled={isSubmitting || isDeleting}
                   >
                     <ArrowLeft className="h-4 w-4" />
                   </Button>
                 </TooltipTrigger>
-                <TooltipContent>Back to Task</TooltipContent>
+                <TooltipContent>Back to Tasks</TooltipContent>
               </Tooltip>
               <h1 className="text-2xl font-semibold tracking-tight">
                 Edit Task
@@ -321,9 +371,6 @@ const TaskEditPage: React.FC = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {errors.title && (
-                    <p className="text-sm text-red-500">{errors.title}</p>
-                  )}
                   <div className="grid gap-2">
                     <Label htmlFor="project_id">Project</Label>
                     <Tooltip>
@@ -341,6 +388,7 @@ const TaskEditPage: React.FC = () => {
                               project_id: undefined,
                             }));
                           }}
+                          disabled={isSubmitting || isDeleting}
                         >
                           <SelectTrigger
                             id="project_id"
@@ -381,6 +429,7 @@ const TaskEditPage: React.FC = () => {
                           onChange={handleInputChange}
                           placeholder="Enter task title"
                           className={errors.title ? "border-red-500" : ""}
+                          disabled={isSubmitting || isDeleting}
                         />
                       </TooltipTrigger>
                       <TooltipContent>
@@ -402,6 +451,7 @@ const TaskEditPage: React.FC = () => {
                           value={formData.description}
                           onChange={handleInputChange}
                           placeholder="Enter task description (optional)"
+                          disabled={isSubmitting || isDeleting}
                         />
                       </TooltipTrigger>
                       <TooltipContent>
@@ -423,6 +473,7 @@ const TaskEditPage: React.FC = () => {
                               assigned_to_id: value,
                             }));
                           }}
+                          disabled={isSubmitting || isDeleting}
                         >
                           <SelectTrigger id="assigned_to_id">
                             <SelectValue placeholder="Select a user or leave unassigned" />
@@ -463,6 +514,7 @@ const TaskEditPage: React.FC = () => {
                                 | "Completed",
                             }))
                           }
+                          disabled={isSubmitting || isDeleting}
                         >
                           <SelectTrigger
                             id="status"
@@ -499,6 +551,7 @@ const TaskEditPage: React.FC = () => {
                           value={formData.deadline}
                           onChange={handleInputChange}
                           className={errors.deadline ? "border-red-500" : ""}
+                          disabled={isSubmitting || isDeleting}
                         />
                       </TooltipTrigger>
                       <TooltipContent>
@@ -524,6 +577,7 @@ const TaskEditPage: React.FC = () => {
                             className={
                               errors.completed_at ? "border-red-500" : ""
                             }
+                            disabled={isSubmitting || isDeleting}
                           />
                         </TooltipTrigger>
                         <TooltipContent>
@@ -538,19 +592,51 @@ const TaskEditPage: React.FC = () => {
                     </div>
                   )}
 
-                  <div className="flex justify-end gap-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => router.push(`/task/view/${taskId}`)}
-                      disabled={isSubmitting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      <Save className="mr-2 h-4 w-4" />
-                      {isSubmitting ? "Saving..." : "Save Changes"}
-                    </Button>
+                  <div className="flex justify-between gap-4">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          disabled={isSubmitting || isDeleting}
+                        >
+                          {isDeleting ? "Deleting..." : "Delete Task"}
+                          <Trash2 className="ml-2 h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Task</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this task? This
+                            action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDelete}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.push("/protected/task")}
+                        disabled={isSubmitting || isDeleting}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || isDeleting}
+                      >
+                        <Save className="mr-2 h-4 w-4" />
+                        {isSubmitting ? "Updating..." : "Update Task"}
+                      </Button>
+                    </div>
                   </div>
                 </form>
               )}

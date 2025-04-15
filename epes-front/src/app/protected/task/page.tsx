@@ -48,8 +48,12 @@ interface TaskResponse {
   id: string;
   title: string;
   status: "Pending" | "In Progress" | "Completed";
-  due_date: string | null;
-  assigned_to: string | null;
+  deadline: string | null;
+  assigned_to: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
   priority: "Low" | "Medium" | "High";
 }
 
@@ -100,68 +104,40 @@ const TasksPage: React.FC = () => {
           "/protected/tasks",
           session.user.token
         );
+        console.log("Tasks fetched:", response);
 
-        // Extract unique user IDs, ensuring they are strings
-        const taskUserIds = response
-          .map((t) => t.assigned_to)
-          .filter(
-            (id): id is string => typeof id === "string" && id.trim() !== ""
+        // Map tasks using assigned_to object directly
+        const mappedTasks: Task[] = response.map((t) => {
+          const assignedTo = t.assigned_to;
+          console.log(
+            `Mapping task ${t.id}, assigned_to:`,
+            assignedTo,
+            `deadline:`,
+            t.deadline
           );
-        const uniqueUserIds: string[] = [...new Set(taskUserIds)];
 
-        // Log for debugging
-        console.log("Unique user IDs:", uniqueUserIds);
-
-        // Fetch user details
-        const userResponses = await Promise.all(
-          uniqueUserIds.map(async (id: string) => {
-            try {
-              const user = await req.GET(
-                `/admin/users?id=${encodeURIComponent(id)}`,
-                session.user.token
-              );
-              return {
-                id,
-                first_name: user.first_name || "",
-                last_name: user.last_name || "",
-              };
-            } catch (error) {
-              console.error(`Failed to fetch user ${id}:`, error);
-              return { id, first_name: "", last_name: "" };
+          // Validate and format deadline
+          let formattedDueDate = "N/A";
+          if (t.deadline) {
+            const parsedDate = new Date(t.deadline);
+            if (!isNaN(parsedDate.getTime())) {
+              formattedDueDate = parsedDate.toISOString().split("T")[0];
             }
-          })
-        );
+          }
 
-        const userMap = new Map<
-          string,
-          { first_name: string; last_name: string }
-        >();
-        userResponses.forEach((user) => {
-          userMap.set(user.id, {
-            first_name: user.first_name,
-            last_name: user.last_name,
-          });
+          return {
+            id: t.id,
+            title: t.title,
+            status: t.status,
+            dueDate: formattedDueDate,
+            assignedTo: {
+              user_id: assignedTo?.id || "",
+              first_name: assignedTo?.first_name || "Unassigned",
+              last_name: assignedTo?.last_name || "",
+            },
+            priority: t.priority,
+          };
         });
-
-        // Map tasks with user names
-        const mappedTasks: Task[] = response.map((t) => ({
-          id: t.id,
-          title: t.title,
-          status: t.status,
-          dueDate: t.due_date
-            ? new Date(t.due_date).toISOString().split("T")[0]
-            : "N/A",
-          assignedTo: {
-            user_id: t.assigned_to || "",
-            first_name: t.assigned_to
-              ? userMap.get(t.assigned_to)?.first_name || "Unknown"
-              : "Unassigned",
-            last_name: t.assigned_to
-              ? userMap.get(t.assigned_to)?.last_name || "User"
-              : "",
-          },
-          priority: t.priority,
-        }));
 
         setTasks(mappedTasks);
 
@@ -228,7 +204,7 @@ const TasksPage: React.FC = () => {
     }
   };
 
-  const handleSort = (field: keyof Task) => {
+  const handleSort = (e: React.MouseEvent, field: keyof Task) => {
     if (sortField === field) {
       setSortDirection(sortDirection === "asc" ? "desc" : "asc");
     } else {
@@ -294,7 +270,11 @@ const TasksPage: React.FC = () => {
     const headers = ["ID,Title,Status,Due Date,Assigned To,Priority"];
     const rows = filteredTasks.map(
       (t) =>
-        `${t.id},${t.title},${t.status},${t.dueDate},${t.assignedTo.first_name} ${t.assignedTo.last_name},${t.priority}`
+        `${t.id},${t.title},${t.status},${t.dueDate},${
+          t.assignedTo.first_name === "Unassigned"
+            ? "Unassigned"
+            : `${t.assignedTo.first_name} ${t.assignedTo.last_name}`.trim()
+        },${t.priority}`
     );
     const csvContent = [headers, ...rows].join("\n");
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
@@ -313,31 +293,31 @@ const TasksPage: React.FC = () => {
         <TableRow>
           <TableHead
             className="cursor-pointer"
-            onClick={() => handleSort("title")}
+            onClick={(e) => handleSort(e, "title")}
           >
             Task Title <ArrowUpDown className="ml-2 h-4 w-4 inline" />
           </TableHead>
           <TableHead
             className="cursor-pointer"
-            onClick={() => handleSort("status")}
+            onClick={(e) => handleSort(e, "status")}
           >
             Status <ArrowUpDown className="ml-2 h-4 w-4 inline" />
           </TableHead>
           <TableHead
             className="cursor-pointer"
-            onClick={() => handleSort("dueDate")}
+            onClick={(e) => handleSort(e, "dueDate")}
           >
             Due Date <ArrowUpDown className="ml-2 h-4 w-4 inline" />
           </TableHead>
           <TableHead
             className="cursor-pointer"
-            onClick={() => handleSort("assignedTo")}
+            onClick={(e) => handleSort(e, "assignedTo")}
           >
             Assigned To <ArrowUpDown className="ml-2 h-4 w-4 inline" />
           </TableHead>
           <TableHead
             className="cursor-pointer"
-            onClick={() => handleSort("priority")}
+            onClick={(e) => handleSort(e, "priority")}
           >
             Priority <ArrowUpDown className="ml-2 h-4 w-4 inline" />
           </TableHead>
@@ -358,23 +338,27 @@ const TasksPage: React.FC = () => {
                     task.status === "Completed"
                       ? "secondary"
                       : task.status === "In Progress"
-                      ? "default"
-                      : "outline"
+                        ? "default"
+                        : "outline"
                   }
                 >
                   {task.status}
                 </Badge>
               </TableCell>
               <TableCell>{task.dueDate}</TableCell>
-              <TableCell>{`${task.assignedTo.first_name} ${task.assignedTo.last_name}`}</TableCell>
+              <TableCell>
+                {task.assignedTo.first_name === "Unassigned"
+                  ? "Unassigned"
+                  : `${task.assignedTo.first_name} ${task.assignedTo.last_name}`.trim()}
+              </TableCell>
               <TableCell>
                 <span
                   className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                     task.priority === "High"
                       ? "bg-red-100 text-red-800"
                       : task.priority === "Medium"
-                      ? "bg-yellow-100 text-yellow-800"
-                      : "bg-green-100 text-green-800"
+                        ? "bg-yellow-100 text-yellow-800"
+                        : "bg-green-100 text-green-800"
                   }`}
                 >
                   {task.priority}
@@ -415,8 +399,8 @@ const TasksPage: React.FC = () => {
                           task.status === "Completed"
                             ? "secondary"
                             : task.status === "In Progress"
-                            ? "default"
-                            : "outline"
+                              ? "default"
+                              : "outline"
                         }
                       >
                         {task.status}
@@ -426,15 +410,17 @@ const TasksPage: React.FC = () => {
                       </p>
                       <p className="text-sm text-muted-foreground">
                         Assigned:{" "}
-                        {`${task.assignedTo.first_name} ${task.assignedTo.last_name}`}
+                        {task.assignedTo.first_name === "Unassigned"
+                          ? "Unassigned"
+                          : `${task.assignedTo.first_name} ${task.assignedTo.last_name}`.trim()}
                       </p>
                       <span
                         className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
                           task.priority === "High"
                             ? "bg-red-100 text-red-800"
                             : task.priority === "Medium"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
                         }`}
                       >
                         {task.priority}
@@ -448,7 +434,9 @@ const TasksPage: React.FC = () => {
                 <p>Task: {task.title}</p>
                 <p>
                   Assigned:{" "}
-                  {`${task.assignedTo.first_name} ${task.assignedTo.last_name}`}
+                  {task.assignedTo.first_name === "Unassigned"
+                    ? "Unassigned"
+                    : `${task.assignedTo.first_name} ${task.assignedTo.last_name}`.trim()}
                 </p>
                 <p>Priority: {task.priority}</p>
               </TooltipContent>
@@ -478,7 +466,9 @@ const TasksPage: React.FC = () => {
                       <h3 className="text-lg font-medium">{task.title}</h3>
                       <p className="text-sm text-muted-foreground">
                         Due: {task.dueDate} | Assigned:{" "}
-                        {`${task.assignedTo.first_name} ${task.assignedTo.last_name}`}
+                        {task.assignedTo.first_name === "Unassigned"
+                          ? "Unassigned"
+                          : `${task.assignedTo.first_name} ${task.assignedTo.last_name}`.trim()}
                       </p>
                       <Progress
                         value={getProgressValue(task.status)}
@@ -491,8 +481,8 @@ const TasksPage: React.FC = () => {
                           task.status === "Completed"
                             ? "secondary"
                             : task.status === "In Progress"
-                            ? "default"
-                            : "outline"
+                              ? "default"
+                              : "outline"
                         }
                       >
                         {task.status}
@@ -502,8 +492,8 @@ const TasksPage: React.FC = () => {
                           task.priority === "High"
                             ? "bg-red-100 text-red-800"
                             : task.priority === "Medium"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
                         }`}
                       >
                         {task.priority}
@@ -516,7 +506,9 @@ const TasksPage: React.FC = () => {
                 <p>Task: {task.title}</p>
                 <p>
                   Assigned:{" "}
-                  {`${task.assignedTo.first_name} ${task.assignedTo.last_name}`}
+                  {task.assignedTo.first_name === "Unassigned"
+                    ? "Unassigned"
+                    : `${task.assignedTo.first_name} ${task.assignedTo.last_name}`.trim()}
                 </p>
                 <p>Priority: {task.priority}</p>
               </TooltipContent>

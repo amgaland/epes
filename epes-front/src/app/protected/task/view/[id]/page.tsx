@@ -28,6 +28,21 @@ interface Project {
   name: string;
 }
 
+interface TaskResponse {
+  id: string;
+  title: string;
+  description: string | null;
+  status: "Pending" | "In Progress" | "Completed";
+  deadline: string | null;
+  assigned_to: {
+    id: string;
+    first_name: string;
+    last_name: string;
+  } | null;
+  priority: "Low" | "Medium" | "High";
+  project_id: string | null;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -67,55 +82,58 @@ const TaskViewPage: React.FC = () => {
         setIsLoading(true);
 
         // Fetch task details
-        const taskResponse = await req.GET(
+        const taskResponse: TaskResponse = await req.GET(
           `/protected/tasks?id=${taskId}`,
           session.user.token
         );
+        console.log("Task fetched:", JSON.stringify(taskResponse, null, 2));
 
-        // Fetch assigned user details if assigned_to exists
-        let assignedTo: User | null = null;
-        if (taskResponse.assigned_to) {
-          try {
-            const userResponse = await req.GET(
-              `/admin/users?id=${encodeURIComponent(taskResponse.assigned_to)}`,
-              session.user.token
-            );
-            assignedTo = {
-              user_id: taskResponse.assigned_to,
-              first_name: userResponse.first_name || "Unknown",
-              last_name: userResponse.last_name || "User",
-            };
-          } catch (userError) {
-            console.error(
-              `Failed to fetch user ${taskResponse.assigned_to}:`,
-              userError
-            );
-            assignedTo = {
-              user_id: taskResponse.assigned_to,
-              first_name: "Unknown",
-              last_name: "User",
-            };
-          }
-        }
+        // Map assigned_to directly
+        const assignedTo: User | null = taskResponse.assigned_to
+          ? {
+              user_id: taskResponse.assigned_to.id,
+              first_name: taskResponse.assigned_to.first_name || "Unassigned",
+              last_name: taskResponse.assigned_to.last_name || "",
+            }
+          : null;
 
         // Fetch project details if project_id exists
         let project: Project | null = null;
         if (taskResponse.project_id) {
           try {
             const projectResponse = await req.GET(
-              `/protected/projects/${taskResponse.project_id}`,
+              `/protected/projects?id=${taskResponse.project_id}`,
               session.user.token
+            );
+            console.log(
+              `Project fetched for ID ${taskResponse.project_id}:`,
+              JSON.stringify(projectResponse, null, 2)
             );
             project = {
               id: taskResponse.project_id,
-              name: projectResponse.name || "Unknown Project",
+              name:
+                projectResponse.name ||
+                projectResponse.title ||
+                "Unnamed Project",
             };
-          } catch (projectError) {
+          } catch (projectError: any) {
             console.error(
               `Failed to fetch project ${taskResponse.project_id}:`,
-              projectError
+              projectError.message
             );
-            project = { id: taskResponse.project_id, name: "Unknown Project" };
+            project = {
+              id: taskResponse.project_id,
+              name: "Unnamed Project",
+            };
+          }
+        }
+
+        // Validate and format deadline
+        let formattedDueDate = "N/A";
+        if (taskResponse.deadline) {
+          const parsedDate = new Date(taskResponse.deadline);
+          if (!isNaN(parsedDate.getTime())) {
+            formattedDueDate = parsedDate.toISOString().split("T")[0];
           }
         }
 
@@ -124,9 +142,7 @@ const TaskViewPage: React.FC = () => {
           title: taskResponse.title,
           description: taskResponse.description || null,
           status: taskResponse.status,
-          dueDate: taskResponse.due_date
-            ? new Date(taskResponse.due_date).toISOString().split("T")[0]
-            : "N/A",
+          dueDate: formattedDueDate,
           assignedTo,
           priority: taskResponse.priority || "Low",
           project,
@@ -135,7 +151,7 @@ const TaskViewPage: React.FC = () => {
         setTask(mappedTask);
       } catch (error: any) {
         console.error("Failed to fetch task:", error);
-        setError("Failed to load task: " + error.message);
+        setError(`Failed to load task: ${error.message}`);
       } finally {
         setIsLoading(false);
       }
@@ -287,8 +303,8 @@ const TaskViewPage: React.FC = () => {
                           task.status === "Completed"
                             ? "secondary"
                             : task.status === "In Progress"
-                            ? "default"
-                            : "outline"
+                              ? "default"
+                              : "outline"
                         }
                       >
                         {task.status}
@@ -301,8 +317,8 @@ const TaskViewPage: React.FC = () => {
                           task.priority === "High"
                             ? "bg-red-100 text-red-800"
                             : task.priority === "Medium"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-green-100 text-green-800"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-green-100 text-green-800"
                         }`}
                       >
                         {task.priority}
@@ -331,7 +347,7 @@ const TaskViewPage: React.FC = () => {
                       </p>
                       <p>
                         {task.assignedTo
-                          ? `${task.assignedTo.first_name} ${task.assignedTo.last_name}`
+                          ? `${task.assignedTo.first_name} ${task.assignedTo.last_name}`.trim()
                           : "Unassigned"}
                       </p>
                     </div>
@@ -345,7 +361,7 @@ const TaskViewPage: React.FC = () => {
                       {task.project ? (
                         <Button
                           variant="link"
-                          className="p-0 h-auto"
+                          className="p-0 h-auto font-normal"
                           onClick={() =>
                             router.push(
                               `/protected/project/view/${task.project!.id}`

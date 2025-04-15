@@ -51,10 +51,8 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "dashboardmanager",
     "dashboardemployee",
     "users",
-    "branch",
     "role",
     "action",
-    "document",
     "action-history",
     "projects",
     "tasks",
@@ -130,12 +128,6 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
       permission: "tasks",
     },
     {
-      title: "Салбар",
-      href: "/protected/branch",
-      icon: House,
-      permission: "branch",
-    },
-    {
       title: "Role",
       href: "/protected/role",
       icon: ScanFace,
@@ -146,12 +138,6 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
       href: "/protected/action",
       icon: ListCheck,
       permission: "action",
-    },
-    {
-      title: "Бичиг баримтууд",
-      href: "/protected/document",
-      icon: BookText,
-      permission: "document",
     },
     {
       title: "Үйлдэлийн түүх",
