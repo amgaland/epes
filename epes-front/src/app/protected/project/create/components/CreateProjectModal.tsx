@@ -8,10 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ProjectFormInputs } from "./components/ProjectFormInputs";
-import { TeamMembersSelection } from "./components/TeamMembersSelection";
-import { FormActions } from "./components/FormActions";
-import { LoadingState } from "./components/LoadingState";
+import { ProjectFormInputs } from "../components/ProjectFormInputs";
+import { TeamMembersSelection } from "../components/TeamMembersSelection";
+import { FormActions } from "../components/FormActions";
+import { LoadingState } from "../components/LoadingState";
 
 interface User {
   id: string;
@@ -48,7 +48,7 @@ interface CreateProjectModalProps {
   onSuccess?: () => void;
 }
 
-function CreateProjectModal({
+export function CreateProjectModal({
   isOpen,
   onClose,
   onSuccess,
@@ -202,6 +202,3 @@ function CreateProjectModal({
     </Dialog>
   );
 }
-
-// Export CreateProjectModal as the default export
-export default CreateProjectModal;

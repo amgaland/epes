@@ -18,6 +18,7 @@ interface ServiceUser extends User {
   is_active: boolean;
   active_start_date: string;
   active_end_date: string;
+  department: string; // Add department field
 }
 
 export const authOptions: NextAuthOptions = {
@@ -70,6 +71,7 @@ export const authOptions: NextAuthOptions = {
               is_active: response.data.is_active,
               active_start_date: response.data.active_start_date,
               active_end_date: response.data.active_end_date,
+              department: response.data.department || "", // Add department, default to empty string if not provided
             };
             return user;
           } else {
@@ -97,6 +99,7 @@ export const authOptions: NextAuthOptions = {
         token.emailWork = customUser.email_work;
         token.phoneNumberPersonal = customUser.phone_number_personal;
         token.phoneNumberWork = customUser.phone_number_work;
+        token.department = customUser.department; // Add department to token
       }
       return token;
     },

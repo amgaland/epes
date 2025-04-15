@@ -65,7 +65,7 @@ const EditKPIPage: React.FC = () => {
       try {
         setIsLoading(true);
         const response = await req.GET(
-          `/protected/kpi/${params.id}`,
+          `/protected/kpi?id=${params.id}`,
           session.user.token
         );
 

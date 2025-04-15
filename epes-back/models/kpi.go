@@ -12,10 +12,28 @@ type KPI struct {
 
 type EmployeeKPI struct {
 	Model
-	EmployeeID  string    `json:"employee_id"`
-	Employee    Employee  `gorm:"foreignKey:EmployeeID;references:ID"`
-	KPIID       string    `json:"kpi_id"`
-	KPI         KPI       `gorm:"foreignKey:KPIID;references:ID"`
-	Score       float64   `json:"score"`
-	EvaluatedAt time.Time `json:"evaluated_at"`
+	EmployeeID          string     `json:"employee_id" gorm:"not null"`
+	Employee            User       `json:"employee" gorm:"foreignKey:EmployeeID;references:ID"`
+	TaskCompletionRate  float64    `json:"task_completion_rate"`
+	TasksCompleted      int        `json:"tasks_completed"`
+	TasksAssigned       int        `json:"tasks_assigned"`
+	ProjectContribution float64    `json:"project_contribution"`
+	ProjectsAssigned    int        `json:"projects_assigned"`
+	PerformanceScore    float64    `json:"performance_score"`
+	Status              string     `json:"status"` // "Excellent", "Good", "Needs Improvement"
+	EvaluatedAt         time.Time  `json:"evaluated_at" gorm:"not null"`
+}
+
+type KPIResponse struct {
+	EmployeeID          string    `json:"employee_id"`
+	EmployeeName       string    `json:"employee_name"`
+	TaskCompletionRate float64   `json:"task_completion_rate"`
+	TasksCompleted     int       `json:"tasks_completed"`
+	TasksAssigned      int       `json:"tasks_assigned"`
+	ProjectContribution float64   `json:"project_contribution"`
+	ProjectsAssigned    int       `json:"projects_assigned"`
+	PerformanceScore    float64   `json:"performance_score"`
+	Status             string    `json:"status"`
+	Tasks              []Task    `json:"tasks,omitempty"`
+	Projects           []Project `json:"projects,omitempty"`
 }

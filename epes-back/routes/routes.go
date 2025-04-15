@@ -100,6 +100,15 @@ func RegisterRoutes(router *gin.Engine) {
             projectRoutes.GET("/tasks/:id", protected.GetAllProjectTasks)
 
         }
+        kpiRoutes := protectedRoutes.Group("/kpi")
+        {
+            kpiRoutes.GET("/kpi", protected.GetAllKPIs)
+	        kpiRoutes.GET("/kpi/:id", protected.GetKPI)
+	        kpiRoutes.POST("/kpi", protected.CreateKPI)
+	        kpiRoutes.PUT("/kpi/:id", protected.UpdateKPI)
+	        kpiRoutes.DELETE("/kpi/:id", protected.DeleteKPI)
+
+        }
     }
 
 }
