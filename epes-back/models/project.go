@@ -4,7 +4,7 @@ import "time"
 
 type Project struct {
 	Model
-	Name           string          `json:"name" gorm:"unique"`
+	Name           string          `json:"name"`
 	Description    string          `json:"description"`
 	StartDate      time.Time       `json:"start_date"`
 	EndDate        *time.Time      `json:"end_date"`

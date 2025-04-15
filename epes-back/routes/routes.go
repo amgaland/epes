@@ -84,13 +84,13 @@ func RegisterRoutes(router *gin.Engine) {
             userDepartmentRoutes.PUT("/update", protected.UpdateUserDepartmentHandler)
         }
         taskRoutes := protectedRoutes.Group("/tasks")
-	{
-		taskRoutes.GET("/", protected.GetAllTasks)
-		taskRoutes.POST("/", protected.CreateTask)
-		taskRoutes.PUT("/:id", protected.UpdateTask)
-		taskRoutes.DELETE("/:id", protected.DeleteTask)
-		taskRoutes.GET("/check-task-id", protected.CheckTaskIDExists)
-	}
+        {
+            taskRoutes.GET("/", protected.GetAllTasks)
+            taskRoutes.POST("/", protected.CreateTask)
+            taskRoutes.PUT("/:id", protected.UpdateTask)
+            taskRoutes.DELETE("/:id", protected.DeleteTask)
+            taskRoutes.GET("/check-task-id", protected.CheckTaskIDExists)
+        }
         projectRoutes := protectedRoutes.Group("/projects")
         {
             projectRoutes.GET("/", protected.GetAllProjects)

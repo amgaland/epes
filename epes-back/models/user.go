@@ -14,8 +14,6 @@ type User struct {
 	IsActive            *bool         `json:"is_active"`
 	ActiveStartDate     time.Time     `json:"active_start_date"`
 	ActiveEndDate       *time.Time    `json:"active_end_date"`
-	DepartmentID        string        `json:"department_id"`
-    Department          Department    `gorm:"foreignKey:DepartmentID" json:"department,omitempty"`
 	Password            string        `json:"password"`
 }
 
@@ -38,5 +36,4 @@ type UserWithRoles struct {
 	ActiveStartDate     time.Time  `json:"active_start_date"`
 	ActiveEndDate       *time.Time `json:"active_end_date,omitempty"`
 	Roles               string     `json:"roles"`
-	Department 		    string     `json:"department"`
 }

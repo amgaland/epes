@@ -101,18 +101,23 @@ const TasksPage: React.FC = () => {
           session.user.token
         );
 
-        // Extract unique user IDs
+        // Extract unique user IDs, ensuring they are strings
         const taskUserIds = response
           .map((t) => t.assigned_to)
-          .filter((id): id is string => !!id);
+          .filter(
+            (id): id is string => typeof id === "string" && id.trim() !== ""
+          );
         const uniqueUserIds: string[] = [...new Set(taskUserIds)];
+
+        // Log for debugging
+        console.log("Unique user IDs:", uniqueUserIds);
 
         // Fetch user details
         const userResponses = await Promise.all(
           uniqueUserIds.map(async (id: string) => {
             try {
               const user = await req.GET(
-                `/admin/users?id=${id}`,
+                `/admin/users?id=${encodeURIComponent(id)}`,
                 session.user.token
               );
               return {
@@ -353,8 +358,8 @@ const TasksPage: React.FC = () => {
                     task.status === "Completed"
                       ? "secondary"
                       : task.status === "In Progress"
-                        ? "default"
-                        : "outline"
+                      ? "default"
+                      : "outline"
                   }
                 >
                   {task.status}
@@ -368,8 +373,8 @@ const TasksPage: React.FC = () => {
                     task.priority === "High"
                       ? "bg-red-100 text-red-800"
                       : task.priority === "Medium"
-                        ? "bg-yellow-100 text-yellow-800"
-                        : "bg-green-100 text-green-800"
+                      ? "bg-yellow-100 text-yellow-800"
+                      : "bg-green-100 text-green-800"
                   }`}
                 >
                   {task.priority}
@@ -410,8 +415,8 @@ const TasksPage: React.FC = () => {
                           task.status === "Completed"
                             ? "secondary"
                             : task.status === "In Progress"
-                              ? "default"
-                              : "outline"
+                            ? "default"
+                            : "outline"
                         }
                       >
                         {task.status}
@@ -428,8 +433,8 @@ const TasksPage: React.FC = () => {
                           task.priority === "High"
                             ? "bg-red-100 text-red-800"
                             : task.priority === "Medium"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
                         }`}
                       >
                         {task.priority}
@@ -486,8 +491,8 @@ const TasksPage: React.FC = () => {
                           task.status === "Completed"
                             ? "secondary"
                             : task.status === "In Progress"
-                              ? "default"
-                              : "outline"
+                            ? "default"
+                            : "outline"
                         }
                       >
                         {task.status}
@@ -497,8 +502,8 @@ const TasksPage: React.FC = () => {
                           task.priority === "High"
                             ? "bg-red-100 text-red-800"
                             : task.priority === "Medium"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
                         }`}
                       >
                         {task.priority}

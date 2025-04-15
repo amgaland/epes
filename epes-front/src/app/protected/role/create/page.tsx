@@ -42,7 +42,7 @@ export default function UserCreatePage() {
 
     try {
       const response = await req.POST(
-        "/protected/roles",
+        "/admin/roles",
         session?.user.token,
         formData
       );

@@ -44,6 +44,16 @@ interface FormErrors {
   completed_at?: string;
 }
 
+interface TaskPayload {
+  project_id: string;
+  title: string;
+  description?: string;
+  status: "Pending" | "In Progress" | "Completed";
+  assigned_to_id?: string;
+  deadline?: string;
+  completed_at?: string;
+}
+
 const TaskCreatePage: React.FC = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
@@ -56,7 +66,7 @@ const TaskCreatePage: React.FC = () => {
     title: "",
     description: "",
     assigned_to_id: "unassigned",
-    status: "PENDING" as "PENDING" | "IN_PROGRESS" | "COMPLETED",
+    status: "Pending" as "Pending" | "In Progress" | "Completed",
     deadline: "",
     completed_at: "",
   });
@@ -113,7 +123,7 @@ const TaskCreatePage: React.FC = () => {
     if (!formData.title.trim()) {
       newErrors.title = "Title is required";
     }
-    if (!["PENDING", "IN_PROGRESS", "COMPLETED"].includes(formData.status)) {
+    if (!["Pending", "In Progress", "Completed"].includes(formData.status)) {
       newErrors.status = "Status must be Pending, In Progress, or Completed";
     }
     if (formData.deadline) {
@@ -124,7 +134,7 @@ const TaskCreatePage: React.FC = () => {
         newErrors.deadline = "Deadline cannot be in the past";
       }
     }
-    if (formData.status === "COMPLETED" && !formData.completed_at) {
+    if (formData.status === "Completed" && !formData.completed_at) {
       newErrors.completed_at = "Completed date is required for completed tasks";
     }
     if (formData.completed_at) {
@@ -149,33 +159,37 @@ const TaskCreatePage: React.FC = () => {
       return;
     }
 
-    const payload: any = {
+    const payload: TaskPayload = {
       project_id: formData.project_id,
       title: formData.title,
-      description: formData.description || "",
+      description: formData.description || undefined,
       status: formData.status,
+      assigned_to_id:
+        formData.assigned_to_id && formData.assigned_to_id !== "unassigned"
+          ? formData.assigned_to_id
+          : undefined,
+      deadline: formData.deadline
+        ? new Date(formData.deadline + "T12:00:00Z").toISOString()
+        : undefined,
+      completed_at:
+        formData.completed_at && formData.status === "Completed"
+          ? new Date(formData.completed_at + "T12:00:00Z").toISOString()
+          : undefined,
     };
 
-    if (formData.assigned_to_id && formData.assigned_to_id !== "unassigned") {
-      payload.assigned_to_id = formData.assigned_to_id;
-    }
+    // Clean undefined fields
+    const cleanPayload = Object.fromEntries(
+      Object.entries(payload).filter(([_, value]) => value !== undefined)
+    );
 
-    if (formData.deadline) {
-      payload.deadline = formData.deadline; // e.g., "2025-04-15"
-    }
-
-    if (formData.completed_at) {
-      payload.completed_at = formData.completed_at; // e.g., "2025-04-15"
-    }
-
-    console.log("Submitting payload:", JSON.stringify(payload, null, 2));
+    console.log("Submitting payload:", JSON.stringify(cleanPayload, null, 2));
 
     try {
       setIsSubmitting(true);
       const response = await req.POST(
         "/protected/tasks",
-        payload,
-        session.user.token
+        session.user.token,
+        cleanPayload
       );
       console.log("Response:", response.data);
       alert("Task created successfully!");
@@ -191,7 +205,8 @@ const TaskCreatePage: React.FC = () => {
       });
       const errorMessage =
         error.response?.data?.message ||
-        error.response?.data ||
+        error.response?.data?.error ||
+        JSON.stringify(error.response?.data) ||
         error.message ||
         "Unknown error";
       alert(`Failed to create task: ${errorMessage}`);
@@ -410,9 +425,9 @@ const TaskCreatePage: React.FC = () => {
                             setFormData((prev) => ({
                               ...prev,
                               status: value as
-                                | "PENDING"
-                                | "IN_PROGRESS"
-                                | "COMPLETED",
+                                | "Pending"
+                                | "In Progress"
+                                | "Completed",
                             }))
                           }
                         >
@@ -423,11 +438,11 @@ const TaskCreatePage: React.FC = () => {
                             <SelectValue placeholder="Select status" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="PENDING">Pending</SelectItem>
-                            <SelectItem value="IN_PROGRESS">
+                            <SelectItem value="Pending">Pending</SelectItem>
+                            <SelectItem value="In Progress">
                               In Progress
                             </SelectItem>
-                            <SelectItem value="COMPLETED">Completed</SelectItem>
+                            <SelectItem value="Completed">Completed</SelectItem>
                           </SelectContent>
                         </Select>
                       </TooltipTrigger>
@@ -462,7 +477,7 @@ const TaskCreatePage: React.FC = () => {
                     )}
                   </div>
 
-                  {formData.status === "COMPLETED" && (
+                  {formData.status === "Completed" && (
                     <div className="grid gap-2">
                       <Label htmlFor="completed_at">Completed At</Label>
                       <Tooltip>

@@ -59,7 +59,7 @@ export default function UserCreatePage() {
         }
 
         const response = await fetch(
-          `http://localhost:8088/protected/users/check-login-id?login_id=${value}`,
+          `http://localhost:8088/admin/users/check-login-id?login_id=${value}`,
           {
             headers: {
               Authorization: `Bearer ${session.user.token}`,
@@ -116,7 +116,7 @@ export default function UserCreatePage() {
 
     try {
       const response = await req.POST(
-        "/protected/users",
+        "/admin/users",
         session.user.token,
         formData
       );
@@ -211,7 +211,9 @@ export default function UserCreatePage() {
                   />
                   {loginIdExists !== null && (
                     <p
-                      className={`text-sm ${loginIdExists ? "text-red-500" : "text-green-500"}`}
+                      className={`text-sm ${
+                        loginIdExists ? "text-red-500" : "text-green-500"
+                      }`}
                     >
                       {loginIdExists
                         ? "Login ID already exists."

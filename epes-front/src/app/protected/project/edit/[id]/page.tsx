@@ -17,7 +17,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Calendar, X } from "lucide-react";
+import { Calendar, X, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 interface User {
   id: string;
@@ -56,9 +68,11 @@ const EditProjectPage: React.FC = () => {
   const router = useRouter();
   const params = useParams();
   const projectId = params.id as string;
+  const { toast } = useToast();
 
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [form, setForm] = useState<ProjectForm>({
     name: "",
@@ -74,26 +88,29 @@ const EditProjectPage: React.FC = () => {
   useEffect(() => {
     const fetchUsersAndProject = async () => {
       if (!session?.user?.token) {
-        alert("Authentication token missing. Please log in again.");
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Authentication token missing. Please log in again.",
+        });
         router.push("/login");
         return;
       }
 
       try {
         setIsLoading(true);
-
-        // Fetch users
         const usersResponse = await req.GET("/admin/users", session.user.token);
         const mappedUsers: User[] = usersResponse.map((u: any) => ({
           id: u.id,
           name:
-            `${u.firstname || u.first_name || ""} ${u.lastname || u.last_name || ""}`.trim() ||
+            `${u.firstname || u.first_name || ""} ${
+              u.lastname || u.last_name || ""
+            }`.trim() ||
             u.username ||
             u.id,
         }));
         setUsers(mappedUsers);
 
-        // Fetch project details
         if (projectId) {
           const projectResponse = await req.GET(
             `/protected/projects?id=${projectId}`,
@@ -121,8 +138,11 @@ const EditProjectPage: React.FC = () => {
           });
         }
       } catch (error: any) {
-        console.error("Failed to fetch data:", error);
-        alert("Failed to load data: " + error.message);
+        toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Failed to load data: " + error.message,
+        });
         setUsers([
           { id: "123e4567-e89b-12d3-a456-426614174000", name: "John Doe" },
           { id: "223e4567-e89b-12d3-a456-426614174001", name: "Jane Smith" },
@@ -139,7 +159,7 @@ const EditProjectPage: React.FC = () => {
         owner_id: session.user.id,
       }));
     }
-  }, [session, projectId, router]);
+  }, [session, projectId, router, toast]);
 
   if (status === "loading") {
     return (
@@ -223,7 +243,11 @@ const EditProjectPage: React.FC = () => {
     if (!validateForm()) return;
 
     if (!session?.user?.token) {
-      alert("Authentication token missing. Please log in again.");
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Authentication token missing. Please log in again.",
+      });
       router.push("/login");
       return;
     }
@@ -249,13 +273,49 @@ const EditProjectPage: React.FC = () => {
         session.user.token,
         payload
       );
-      alert("Project updated successfully");
+      toast({
+        title: "Success",
+        description: "Project updated successfully",
+      });
       router.push("/protected/project");
     } catch (error: any) {
-      console.error("Failed to update project:", error);
-      alert("Failed to update project: " + error.message);
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to update project: " + error.message,
+      });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!session?.user?.token) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Authentication token missing. Please log in again.",
+      });
+      router.push("/login");
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await req.DELETE(`/protected/projects/${projectId}`, session.user.token);
+      toast({
+        title: "Success",
+        description: "Project deleted successfully",
+      });
+      router.push("/protected/project");
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: "Failed to delete project: " + error.message,
+      });
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -266,7 +326,6 @@ const EditProjectPage: React.FC = () => {
           <h1 className="text-3xl font-bold tracking-tight mb-6">
             Edit Project
           </h1>
-
           <Card>
             <CardHeader>
               <CardTitle>Project Details</CardTitle>
@@ -281,7 +340,6 @@ const EditProjectPage: React.FC = () => {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="space-y-6">
-                  {/* Project Name */}
                   <div className="space-y-2">
                     <Label htmlFor="name">Project Name</Label>
                     <Input
@@ -297,8 +355,6 @@ const EditProjectPage: React.FC = () => {
                       <p className="text-sm text-red-500">{errors.name}</p>
                     )}
                   </div>
-
-                  {/* Project Owner */}
                   <div className="space-y-2">
                     <Label htmlFor="owner">Project Owner</Label>
                     <Input
@@ -308,8 +364,6 @@ const EditProjectPage: React.FC = () => {
                       className="bg-gray-100 cursor-not-allowed"
                     />
                   </div>
-
-                  {/* Status */}
                   <div className="space-y-2">
                     <Label htmlFor="status">Status</Label>
                     <Select
@@ -330,8 +384,6 @@ const EditProjectPage: React.FC = () => {
                       <p className="text-sm text-red-500">{errors.status}</p>
                     )}
                   </div>
-
-                  {/* Start Date */}
                   <div className="space-y-2">
                     <Label htmlFor="start_date">Start Date</Label>
                     <div className="relative">
@@ -353,8 +405,6 @@ const EditProjectPage: React.FC = () => {
                       </p>
                     )}
                   </div>
-
-                  {/* End Date */}
                   <div className="space-y-2">
                     <Label htmlFor="end_date">End Date (Optional)</Label>
                     <div className="relative">
@@ -374,8 +424,6 @@ const EditProjectPage: React.FC = () => {
                       <p className="text-sm text-red-500">{errors.end_date}</p>
                     )}
                   </div>
-
-                  {/* Team Members */}
                   <div className="space-y-2">
                     <Label>Team Members</Label>
                     <div className="space-y-2">
@@ -458,8 +506,6 @@ const EditProjectPage: React.FC = () => {
                       )}
                     </div>
                   </div>
-
-                  {/* Description */}
                   <div className="space-y-2">
                     <Label htmlFor="description">Description (Optional)</Label>
                     <Textarea
@@ -471,20 +517,50 @@ const EditProjectPage: React.FC = () => {
                       disabled={isSubmitting}
                     />
                   </div>
-
-                  {/* Submit Button */}
-                  <div className="flex justify-end gap-4">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => router.push("/protected/project")}
-                      disabled={isSubmitting}
-                    >
-                      Cancel
-                    </Button>
-                    <Button type="submit" disabled={isSubmitting}>
-                      {isSubmitting ? "Updating..." : "Update Project"}
-                    </Button>
+                  <div className="flex justify-between gap-4">
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          disabled={isSubmitting || isDeleting}
+                        >
+                          {isDeleting ? "Deleting..." : "Delete Project"}
+                          <Trash2 className="ml-2 h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Project</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete this project? This
+                            action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction onClick={handleDelete}>
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                    <div className="flex gap-4">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => router.push("/protected/project")}
+                        disabled={isSubmitting || isDeleting}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isSubmitting || isDeleting}
+                      >
+                        {isSubmitting ? "Updating..." : "Update Project"}
+                      </Button>
+                    </div>
                   </div>
                 </form>
               )}
