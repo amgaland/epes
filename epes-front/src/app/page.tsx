@@ -42,7 +42,7 @@ export default function Home() {
         router.push("/unauthorized");
       }
     } else if (status === "unauthenticated") {
-      router.push("/login");
+      router.push("/auth/signin");
     }
   }, [status, session, isAdmin, isManager, isEmployee, router]);
 

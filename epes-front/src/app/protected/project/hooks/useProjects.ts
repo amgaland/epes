@@ -26,7 +26,7 @@ export const useProjects = () => {
     const loadProjects = async () => {
       if (!session?.user?.token) {
         alert("Authentication token missing. Please log in again.");
-        router.push("/login");
+        router.push("/auth/signin");
         return;
       }
 

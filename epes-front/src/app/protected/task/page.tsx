@@ -70,7 +70,7 @@ export default function TasksPage() {
   }
 
   if (status === "unauthenticated" || !session) {
-    router.push("/login");
+    router.push("/auth/signin");
     return null;
   }
 
