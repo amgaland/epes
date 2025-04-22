@@ -1,33 +1,19 @@
-"use client";
-
-import * as React from "react";
-import {
-  ArrowUpCircleIcon,
-  Sun,
-  Moon,
-  LayoutDashboardIcon,
-  ListIcon,
-  BarChartIcon,
-  FolderIcon,
-  User,
-  DatabaseIcon,
-  ClipboardListIcon,
-  FileIcon,
-  SettingsIcon,
-  HelpCircleIcon,
-  SearchIcon,
-} from "lucide-react";
-import {
-  Sidebar,
-  SidebarContent,
-  SidebarFooter,
-  SidebarHeader,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar"; // Shadcn Sidebar components
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/ui/nav";
+import {
+  LayoutDashboard,
+  Users,
+  Sun,
+  Moon,
+  ShoppingCart,
+  User,
+  ScanFace,
+  ListCheck,
+  NotebookPen,
+  BookText,
+  House,
+  LucideIcon,
+} from "lucide-react";
 import { useTheme } from "next-themes";
 import { signOut, useSession } from "next-auth/react";
 import {
@@ -36,7 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { LucideIcon } from "lucide-react";
 
 // Define types
 interface UserProfile {
@@ -57,48 +42,43 @@ interface NavLink {
   href: string;
   icon: LucideIcon;
   permission: string;
-  label?: string;
 }
 
 // Role permissions
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: [
     "dashboard",
-    "lifecycle",
-    "analytics",
+    "users",
+    "role",
+    "action",
+    "action-history",
     "projects",
-    "team",
-    "data-library",
-    "reports",
-    "word-assistant",
-    "settings",
-    "help",
-    "search",
+    "tasks",
+    "kpi",
+    "department",
   ],
-  manager: ["dashboard", "projects", "team", "data-library", "reports"],
-  employee: ["dashboard", "projects"],
+  manager: ["dashboard", "users", "document", "projects", "tasks"],
+  employee: ["dashboard", "projects", "tasks"],
 };
 
 const ProfileSection: React.FC<{ profile: UserProfile }> = ({ profile }) => {
   const fullName = `${profile?.lastname?.[0] || ""}.${profile?.firstname || ""}`;
-  const role = Array.isArray(profile?.roles)
-    ? profile?.roles.join(", ")
-    : profile?.roles || "";
+  const role = profile?.roles || "";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <div className="flex items-center p-2 rounded-md hover:bg-accent hover:text-accent-foreground transition-colors cursor-pointer">
-          <User className="h-4 w-4" />
+        <div className="flex items-center p-2 cursor-pointer">
+          <User />
           <div className="ml-2">
-            <h1 className="font-medium text-sm">{fullName}</h1>
-            <p className="text-xs text-muted-foreground">{role}</p>
+            <h1 className="font-semibold text-sm">{fullName}</h1>
+            <p className="font-thin text-xs text-muted-foreground">{role}</p>
           </div>
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
         <DropdownMenuItem className="text-red-600" onClick={() => signOut()}>
-          Sign out
+          Гарах
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
@@ -112,68 +92,56 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
     {
       title: "Dashboard",
       href: "/protected/dashboard",
-      icon: LayoutDashboardIcon,
+      icon: LayoutDashboard,
       permission: "dashboard",
     },
     {
-      title: "Lifecycle",
-      href: "#lifecycle",
-      icon: ListIcon,
-      permission: "lifecycle",
-    },
-    {
-      title: "Analytics",
-      href: "#analytics",
-      icon: BarChartIcon,
-      permission: "analytics",
+      title: "Users",
+      href: "/protected/user",
+      icon: Users,
+      permission: "users",
     },
     {
       title: "Projects",
       href: "/protected/project",
-      icon: FolderIcon,
+      icon: ListCheck,
       permission: "projects",
     },
     {
-      title: "Team",
-      href: "#team",
-      icon: User,
-      permission: "team",
+      title: "Tasks",
+      href: "/protected/task",
+      icon: ListCheck,
+      permission: "tasks",
     },
     {
-      title: "Data Library",
-      href: "#data-library",
-      icon: DatabaseIcon,
-      permission: "data-library",
+      title: "Role",
+      href: "/protected/role",
+      icon: ScanFace,
+      permission: "role",
     },
     {
-      title: "Reports",
-      href: "#reports",
-      icon: ClipboardListIcon,
-      permission: "reports",
+      title: "Үйлдэл",
+      href: "/protected/action",
+      icon: ListCheck,
+      permission: "action",
     },
     {
-      title: "Word Assistant",
-      href: "#word-assistant",
-      icon: FileIcon,
-      permission: "word-assistant",
+      title: "Үйлдэлийн түүх",
+      href: "/protected/action-history",
+      icon: NotebookPen,
+      permission: "action-history",
     },
     {
-      title: "Settings",
-      href: "#settings",
-      icon: SettingsIcon,
-      permission: "settings",
+      title: "KPI",
+      href: "/protected/kpi",
+      icon: NotebookPen,
+      permission: "kpi",
     },
     {
-      title: "Get Help",
-      href: "#help",
-      icon: HelpCircleIcon,
-      permission: "help",
-    },
-    {
-      title: "Search",
-      href: "#search",
-      icon: SearchIcon,
-      permission: "search",
+      title: "Deparments",
+      href: "/protected/department",
+      icon: NotebookPen,
+      permission: "department",
     },
   ];
 
@@ -206,71 +174,42 @@ const SideBar: React.FC = () => {
   // Handle loading state
   if (status === "loading") {
     return (
-      <Sidebar>
-        <div className="h-screen w-[220px] bg-background dark:bg-background-dark animate-pulse" />
-      </Sidebar>
+      <div className="h-screen w-[220px] bg-background dark:bg-background-dark animate-pulse" />
     );
   }
 
   // Normalize roles from session
   const userRoles: string[] = session?.user?.roles
     ? Array.isArray(session.user.roles)
-      ? session.user.roles
-      : [session.user.roles]
+      ? (session.user.roles as string[])
+      : [session.user.roles as string]
     : [];
 
-  // Use session.user directly
-  const userProfile: UserProfile = session?.user || {};
-
   return (
-    <Sidebar
-      collapsible="offcanvas"
-      className="border-r border-gray-200 dark:border-gray-700"
-    >
-      <SidebarHeader>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
-            >
-              <a href="#">
-                <ArrowUpCircleIcon className="h-5 w-5 text-primary" />
-                <span className="text-base font-semibold text-foreground">
-                  Acme Inc.
-                </span>
-              </a>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarHeader>
-      <SidebarContent>
+    <div className="h-screen flex flex-col justify-between px-2 py-4 w-[220px] bg-background dark:bg-background-dark">
+      <div className="mt-6 ">
         <Navigation roles={userRoles} />
-      </SidebarContent>
-      <SidebarFooter>
-        <SidebarMenu>
-          <SidebarMenuItem>
-            {session?.user && <ProfileSection profile={userProfile} />}
-          </SidebarMenuItem>
-          <SidebarMenuItem>
-            <Button
-              onClick={toggleTheme}
-              variant="ghost"
-              className="flex items-center justify-start w-full rounded-md hover:bg-accent hover:text-accent-foreground transition-colors"
-            >
-              {theme === "dark" ? (
-                <Sun className="h-4 w-4" />
-              ) : (
-                <Moon className="h-4 w-4" />
-              )}
-              <span className="ml-2 text-sm">
-                {theme === "dark" ? "Light" : "Dark"} Mode
-              </span>
-            </Button>
-          </SidebarMenuItem>
-        </SidebarMenu>
-      </SidebarFooter>
-    </Sidebar>
+      </div>
+      <div className="space-y-4">
+        {session?.user && (
+          <ProfileSection profile={session.user as UserProfile} />
+        )}
+        <Button
+          onClick={toggleTheme}
+          variant="ghost"
+          className="flex items-center justify-start w-full"
+        >
+          {theme === "dark" ? (
+            <Sun className="h-5 w-5" />
+          ) : (
+            <Moon className="h-5 w-5" />
+          )}
+          <span className="ml-2">
+            {theme === "dark" ? "Light" : "Dark"} Mode
+          </span>
+        </Button>
+      </div>
+    </div>
   );
 };
 
