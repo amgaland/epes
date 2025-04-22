@@ -1,13 +1,14 @@
-// src/app/protected/kpi/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import {
   BarChart,
   CheckCircle,
@@ -18,6 +19,7 @@ import {
   List,
   Table as TableIcon,
   Users,
+  RefreshCw,
 } from "lucide-react";
 import { Search } from "lucide-react";
 import { KPIStats } from "./components/KPIStats";
@@ -27,7 +29,7 @@ import { KPIGrid } from "./components/KPIGrid";
 import { KPIList } from "./components/KPIList";
 import { KPIReportDialog } from "./components/KPIReportDialog";
 import { DeleteDialog } from "./components/DeleteDialog";
-import { fetchEmployeeKPIs } from "./services/kpiService";
+import { fetchEmployeeKPIs, deleteKPI } from "./services/kpiService";
 import {
   sortKPIs,
   filterKPIs,
@@ -35,7 +37,18 @@ import {
   generatePerformanceReport,
 } from "./utils/kpiUtils";
 import { EmployeeKPI, KPIStat, ReportConfig } from "./types";
-import { deleteKPI } from "./services/kpiService";
+
+// Custom debounce function to avoid lodash dependency
+const debounce = <F extends (...args: any[]) => void>(
+  func: F,
+  wait: number
+) => {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<F>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+};
 
 const KPIPage: React.FC = () => {
   const { data: session, status } = useSession();
@@ -63,6 +76,79 @@ const KPIPage: React.FC = () => {
     includeComments: false,
   });
 
+  // Centralized KPI metrics calculation
+  const calculateKPIMetrics = useCallback((kpiData: EmployeeKPI[]) => {
+    const excellentPerformers = kpiData.filter(
+      (k) => k.status === "Excellent"
+    ).length;
+    const goodPerformers = kpiData.filter((k) => k.status === "Good").length;
+    const needsImprovement = kpiData.filter(
+      (k) => k.status === "Needs Improvement"
+    ).length;
+    const avgPerformanceScore =
+      kpiData.length > 0
+        ? Math.round(
+            kpiData.reduce((sum, k) => sum + k.performanceScore, 0) /
+              kpiData.length
+          )
+        : 0;
+    const totalEmployees = kpiData.length;
+
+    return {
+      stats: [
+        {
+          title: "Excellent Performers",
+          value: excellentPerformers,
+          icon: CheckCircle,
+        },
+        { title: "Good Performers", value: goodPerformers, icon: Users },
+        { title: "Needs Improvement", value: needsImprovement, icon: Clock },
+        {
+          title: "Avg Performance Score",
+          value: avgPerformanceScore,
+          icon: BarChart,
+        },
+      ],
+      metrics: {
+        totalEmployees,
+        excellentPerformers,
+        avgPerformanceScore,
+      },
+    };
+  }, []);
+
+  // Debounced search handler
+  const debouncedSearch = useMemo(
+    () =>
+      debounce((value: string) => {
+        setSearchTerm(value);
+      }, 300),
+    []
+  );
+
+  // Handle search input change
+  const handleSearchChange = useCallback(
+    (e: React.ChangeEvent<HTMLInputElement>) => {
+      const value = e.target.value;
+      setSearchInput(value);
+      debouncedSearch(value);
+    },
+    [debouncedSearch]
+  );
+
+  // Reset all filters
+  const resetFilters = useCallback(() => {
+    setSearchInput("");
+    setSearchTerm("");
+    setFilterStatus("All");
+    setSortField(null);
+    setSortDirection("asc");
+    toast({
+      title: "Filters Reset",
+      description: "All filters have been cleared.",
+    });
+  }, [toast]);
+
   useEffect(() => {
     const fetchData = async () => {
       if (!session?.user?.token) {
@@ -80,37 +166,8 @@ const KPIPage: React.FC = () => {
         const kpiData = await fetchEmployeeKPIs(session.user.token);
         setKPIs(kpiData);
 
-        const excellentPerformers = kpiData.filter(
-          (k) => k.status === "Excellent"
-        ).length;
-        const goodPerformers = kpiData.filter(
-          (k) => k.status === "Good"
-        ).length;
-        const needsImprovement = kpiData.filter(
-          (k) => k.status === "Needs Improvement"
-        ).length;
-        const avgPerformanceScore =
-          kpiData.length > 0
-            ? Math.round(
-                kpiData.reduce((sum, k) => sum + k.performanceScore, 0) /
-                  kpiData.length
-              )
-            : 0;
-
-        setStats([
-          {
-            title: "Excellent Performers",
-            value: excellentPerformers,
-            icon: CheckCircle,
-          },
-          { title: "Good Performers", value: goodPerformers, icon: Users },
-          { title: "Needs Improvement", value: needsImprovement, icon: Clock },
-          {
-            title: "Avg Performance Score",
-            value: avgPerformanceScore,
-            icon: BarChart,
-          },
-        ]);
+        const { stats } = calculateKPIMetrics(kpiData);
+        setStats(stats);
       } catch (error: any) {
         console.error("Failed to fetch KPIs:", error);
         toast({
@@ -133,7 +190,7 @@ const KPIPage: React.FC = () => {
     if (session) {
       fetchData();
     }
-  }, [session, router, toast]);
+  }, [session, router, toast, debouncedSearch, calculateKPIMetrics]);
 
   const roles = session?.user?.roles
     ? Array.isArray(session.user.roles)
@@ -142,35 +199,44 @@ const KPIPage: React.FC = () => {
     : [];
   const isAdmin = roles.includes("ADMIN");
 
-  const handleSearchKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === "Enter") {
-      setSearchTerm(searchInput);
-    }
-  };
+  const handleSort = useCallback(
+    (field: keyof EmployeeKPI) => {
+      if (sortField === field) {
+        setSortDirection(sortDirection === "asc" ? "desc" : "asc");
+      } else {
+        setSortField(field);
+        setSortDirection("asc");
+      }
+    },
+    [sortField, sortDirection]
+  );
 
-  const handleSort = (field: keyof EmployeeKPI) => {
-    if (sortField === field) {
-      setSortDirection(sortDirection === "asc" ? "desc" : "asc");
-    } else {
-      setSortField(field);
-      setSortDirection("asc");
-    }
-  };
+  const handleKPIClick = useCallback(
+    (employeeId: string) => {
+      router.push(`/protected/kpi/employee/${employeeId}`);
+    },
+    [router]
+  );
 
-  const handleKPIClick = (employeeId: string) => {
-    router.push(`/protected/kpi/employee/${employeeId}`);
-  };
+  const handleEditKPI = useCallback(
+    (employeeId: string) => {
+      router.push(`/protected/kpi/edit/${employeeId}`);
+    },
+    [router]
+  );
 
-  const handleEditKPI = (employeeId: string) => {
-    router.push(`/protected/kpi/edit/${employeeId}`);
-  };
-
-  const handleDeleteKPI = async () => {
+  const handleDeleteKPI = useCallback(async () => {
     if (!employeeToDelete || !session?.user?.token) return;
 
     try {
       await deleteKPI(employeeToDelete, session.user.token);
-      setKPIs(kpis.filter((kpi) => kpi.employeeId !== employeeToDelete));
+      setKPIs((prev) =>
+        prev.filter((kpi) => kpi.employeeId !== employeeToDelete)
+      );
+      const { stats } = calculateKPIMetrics(
+        kpis.filter((kpi) => kpi.employeeId !== employeeToDelete)
+      );
+      setStats(stats);
       toast({
         title: "Success",
         description: "KPI record deleted successfully.",
@@ -186,16 +252,28 @@ const KPIPage: React.FC = () => {
       setDeleteDialogOpen(false);
       setEmployeeToDelete(null);
     }
-  };
+  }, [employeeToDelete, session, toast, kpis, calculateKPIMetrics]);
 
-  const sortedKPIs = sortKPIs(kpis, sortField, sortDirection);
-  const filteredKPIs = filterKPIs(sortedKPIs, searchTerm, filterStatus);
+  const sortedKPIs = useMemo(
+    () => sortKPIs(kpis, sortField, sortDirection),
+    [kpis, sortField, sortDirection]
+  );
+  const filteredKPIs = useMemo(
+    () => filterKPIs(sortedKPIs, searchTerm, filterStatus),
+    [sortedKPIs, searchTerm, filterStatus]
+  );
+
+  // Calculate metrics for Quick Info
+  const { metrics } = useMemo(
+    () => calculateKPIMetrics(kpis),
+    [kpis, calculateKPIMetrics]
+  );
 
   if (status === "loading") {
     return (
       <div className="flex min-h-screen bg-background">
         <div className="flex-1 flex flex-col">
-          <main className="p-6 flex-1">
+          <main className="p-4 sm:p-6 flex-1">
             <Skeleton className="h-8 w-[200px] mb-6" />
             <KPIStats stats={[]} isLoading={true} />
           </main>
@@ -221,54 +299,63 @@ const KPIPage: React.FC = () => {
 
   return (
     <div className="flex min-h-screen bg-background">
-      <div className="flex-1 flex flex-col">
+      <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full">
         {/* Search and Actions */}
-        <div className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background px-4 sm:static sm:h-auto sm:border-0 sm:bg-transparent sm:px-6">
-          <div className="relative ml-auto flex-1 md:grow-0">
-            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              type="search"
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              onKeyDown={handleSearchKeyDown}
-              placeholder="Employees хайх..."
-              className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
-            />
-          </div>
-          <Button onClick={() => router.push("/protected/kpi/create")}>
-            <CirclePlus className="mr-2 h-4 w-4" />
-            Нэмэх
-          </Button>
-          <Button
-            variant="outline"
-            onClick={() => exportToCSV(filteredKPIs)}
-            disabled={isLoading}
-          >
-            <Download className="mr-2 h-4 w-4" />
-            Export CSV
-          </Button>
-        </div>
+        <Card className="sticky top-0 z-30 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+          <CardContent className="flex flex-col sm:flex-row items-center gap-4 p-4">
+            <div className="relative w-full sm:w-auto flex-1">
+              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                type="search"
+                value={searchInput}
+                onChange={handleSearchChange}
+                placeholder="Search employees..."
+                className="pl-8 w-full sm:w-[250px] lg:w-[350px]"
+              />
+            </div>
+            <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
+              <Button onClick={() => router.push("/protected/kpi/create")}>
+                <CirclePlus className="mr-2 h-4 w-4" />
+                Add KPI
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => exportToCSV(filteredKPIs)}
+                disabled={isLoading}
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Export CSV
+              </Button>
+              <Button variant="outline" onClick={resetFilters}>
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Reset
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
-        <main className="p-6 flex-1">
+        <main className="p-4 sm:p-6 flex-1">
           <div className="flex justify-between items-center mb-6">
-            <h1 className="text-3xl font-bold tracking-tight">Employee KPIs</h1>
+            <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
+              Employee KPIs
+            </h1>
             <div className="flex gap-2">
               <Button
-                variant={viewMode === "table" ? "default" : "outline"}
+                variant={viewMode === "table" ? "default" : "ghost"}
                 size="icon"
                 onClick={() => setViewMode("table")}
               >
                 <TableIcon className="h-4 w-4" />
               </Button>
               <Button
-                variant={viewMode === "grid" ? "default" : "outline"}
+                variant={viewMode === "grid" ? "default" : "ghost"}
                 size="icon"
                 onClick={() => setViewMode("grid")}
               >
                 <LayoutGrid className="h-4 w-4" />
               </Button>
               <Button
-                variant={viewMode === "list" ? "default" : "outline"}
+                variant={viewMode === "list" ? "default" : "ghost"}
                 size="icon"
                 onClick={() => setViewMode("list")}
               >
@@ -278,118 +365,147 @@ const KPIPage: React.FC = () => {
           </div>
 
           {/* Quick Filters */}
-          <div className="flex gap-2 mb-6">
-            <Button
-              variant={filterStatus === "All" ? "default" : "outline"}
-              onClick={() => setFilterStatus("All")}
-            >
-              All
-            </Button>
-            <Button
-              variant={filterStatus === "Excellent" ? "default" : "outline"}
-              onClick={() => setFilterStatus("Excellent")}
-            >
-              Excellent
-            </Button>
-            <Button
-              variant={filterStatus === "Good" ? "default" : "outline"}
-              onClick={() => setFilterStatus("Good")}
-            >
-              Good
-            </Button>
-            <Button
-              variant={
-                filterStatus === "Needs Improvement" ? "default" : "outline"
-              }
-              onClick={() => setFilterStatus("Needs Improvement")}
-            >
-              Needs Improvement
-            </Button>
-          </div>
+          <Card className="mb-6">
+            <CardContent className="flex flex-wrap gap-2 p-4">
+              <Button
+                variant={filterStatus === "All" ? "default" : "outline"}
+                onClick={() => setFilterStatus("All")}
+              >
+                All
+              </Button>
+              <Button
+                variant={filterStatus === "Excellent" ? "default" : "outline"}
+                onClick={() => setFilterStatus("Excellent")}
+              >
+                Excellent
+              </Button>
+              <Button
+                variant={filterStatus === "Good" ? "default" : "outline"}
+                onClick={() => setFilterStatus("Good")}
+              >
+                Good
+              </Button>
+              <Button
+                variant={
+                  filterStatus === "Needs Improvement" ? "default" : "outline"
+                }
+                onClick={() => setFilterStatus("Needs Improvement")}
+              >
+                Needs Improvement
+              </Button>
+            </CardContent>
+          </Card>
 
           <KPIStats stats={stats} isLoading={isLoading} />
 
           <div className="grid gap-4 md:grid-cols-2 mb-6">
-            <KPIActions
-              isLoading={isLoading}
-              onCreate={() => router.push("/protected/kpi/create")}
-              onGenerateReport={() => setReportDialogOpen(true)}
-              onViewExcellent={() => router.push("/protected/kpi/excellent")}
-              onViewAll={() => router.push("/protected/kpi/all")}
-            />
-            <div>
-              <h2 className="text-lg font-medium mb-2">Quick Info</h2>
-              {isLoading ? (
-                <Skeleton className="h-20 w-full" />
-              ) : (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    Total Employees: {kpis.length}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Excellent:{" "}
-                    {kpis.filter((k) => k.status === "Excellent").length}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    Avg Score:{" "}
-                    {kpis.length > 0
-                      ? Math.round(
-                          kpis.reduce((sum, k) => sum + k.performanceScore, 0) /
-                            kpis.length
-                        )
-                      : 0}
-                  </p>
-                </div>
-              )}
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <KPIActions
+                  isLoading={isLoading}
+                  onCreate={() => router.push("/protected/kpi/create")}
+                  onGenerateReport={() => setReportDialogOpen(true)}
+                  onViewExcellent={() =>
+                    router.push("/protected/kpi/excellent")
+                  }
+                  onViewAll={() => router.push("/protected/kpi/all")}
+                />
+              </CardContent>
+            </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle>Quick Info</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {isLoading ? (
+                  <Skeleton className="h-20 w-full" />
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Total Employees
+                      </span>
+                      <span className="text-sm font-medium">
+                        {metrics.totalEmployees}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Excellent
+                      </span>
+                      <span className="text-sm font-medium">
+                        {metrics.excellentPerformers}
+                      </span>
+                    </div>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">
+                        Avg Score
+                      </span>
+                      <span className="text-sm font-medium">
+                        {metrics.avgPerformanceScore}
+                      </span>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
-          <div>
-            <h2 className="text-lg font-medium mb-2">Employee KPI List</h2>
-            {isLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-8 w-full" />
-                <Skeleton className="h-32 w-full" />
-              </div>
-            ) : (
-              <>
-                {viewMode === "table" && (
-                  <KPITable
-                    kpis={filteredKPIs}
-                    onSort={handleSort}
-                    onClick={handleKPIClick}
-                    onEdit={handleEditKPI}
-                    onDelete={(id) => {
-                      setEmployeeToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                  />
-                )}
-                {viewMode === "grid" && (
-                  <KPIGrid
-                    kpis={filteredKPIs}
-                    onClick={handleKPIClick}
-                    onEdit={handleEditKPI}
-                    onDelete={(id) => {
-                      setEmployeeToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                  />
-                )}
-                {viewMode === "list" && (
-                  <KPIList
-                    kpis={filteredKPIs}
-                    onClick={handleKPIClick}
-                    onEdit={handleEditKPI}
-                    onDelete={(id) => {
-                      setEmployeeToDelete(id);
-                      setDeleteDialogOpen(true);
-                    }}
-                  />
-                )}
-              </>
-            )}
-          </div>
+          <Card>
+            <CardHeader>
+              <CardTitle>Employee KPI List</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="space-y-4">
+                  <Skeleton className="h-8 w-full" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              ) : (
+                <>
+                  {viewMode === "table" && (
+                    <KPITable
+                      kpis={filteredKPIs}
+                      onSort={handleSort}
+                      onClick={handleKPIClick}
+                      onEdit={handleEditKPI}
+                      onDelete={(id) => {
+                        setEmployeeToDelete(id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    />
+                  )}
+                  {viewMode === "grid" && (
+                    <KPIGrid
+                      kpis={filteredKPIs}
+                      onClick={handleKPIClick}
+                      onEdit={handleEditKPI}
+                      onDelete={(id) => {
+                        setEmployeeToDelete(id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    />
+                  )}
+                  {viewMode === "list" && (
+                    <KPIList
+                      kpis={filteredKPIs}
+                      onClick={handleKPIClick}
+                      onEdit={handleEditKPI}
+                      onDelete={(id) => {
+                        setEmployeeToDelete(id);
+                        setDeleteDialogOpen(true);
+                      }}
+                    />
+                  )}
+                </>
+              )}
+            </CardContent>
+          </Card>
         </main>
 
         <DeleteDialog

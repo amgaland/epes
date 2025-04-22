@@ -117,7 +117,7 @@ export default function RoleFormPage() {
             <RolePermission roleID={id!} />
 
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Уншиж байна..." : id ? "Хадгалах" : "Нэмэх"}
+              {loading ? "Уншиж байна..." : id ? "Хадгалах" : "Add"}
             </Button>
           </form>
         </CardContent>

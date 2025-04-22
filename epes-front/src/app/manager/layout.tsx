@@ -1,6 +1,5 @@
 "use client";
 import { useRequireAuth } from "@/lib/checkAuth";
-import { Header } from "@/components/header";
 
 export default function RootLayout({
   children,
@@ -10,7 +9,6 @@ export default function RootLayout({
   useRequireAuth();
   return (
     <>
-      <Header />
       <div className="flex h-screen rounded-lg">
         <div className="w-full py-4 max-h-screen">
           <div className="h-full rounded-xl overflow-y-auto">

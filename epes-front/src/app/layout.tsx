@@ -5,7 +5,8 @@ import { Providers } from "@/components/session-provider";
 import { Toaster } from "@/components/ui/toaster";
 import { Suspense } from "react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Header } from "@/components/header";
+import { SidebarProvider } from "@/components/ui/sidebar";
+import AppSidebar from "./page";
 
 export const metadata = constructMetadata();
 
@@ -25,6 +26,7 @@ export default function RootLayout({
             disableTransitionOnChange
           >
             <Suspense fallback={<Skeleton />}>
+              <AppSidebar />
               <main>{children}</main>
             </Suspense>
             <Toaster />

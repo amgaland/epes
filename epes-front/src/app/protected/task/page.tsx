@@ -94,14 +94,14 @@ export default function TasksPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Tasks хайх..."
+              placeholder="Search task..."
               className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
             />
           </div>
           {(isAdmin || isManager) && (
             <Button onClick={() => setIsCreateModalOpen(true)}>
               <CirclePlus className="mr-2 h-4 w-4" />
-              Нэмэх
+              Add
             </Button>
           )}
           <Button

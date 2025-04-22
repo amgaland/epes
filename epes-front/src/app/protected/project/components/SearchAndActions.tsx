@@ -35,7 +35,7 @@ export function SearchAndActions({
       {(isAdmin || isManager) && (
         <Button onClick={onCreateProject}>
           <CirclePlus className="mr-2 h-4 w-4" />
-          Нэмэх
+          Add
         </Button>
       )}
       {(isAdmin || isManager) && (

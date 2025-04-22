@@ -77,13 +77,13 @@ export default function Page() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={handleSearchKeyDown}
-              placeholder="Мэйл хаягаар хайх..."
+              placeholder="Мэйл хаягаар search..."
               className="w-full rounded-lg bg-background pl-8 md:w-[200px] lg:w-[336px]"
             />
           </div>
           <Button onClick={() => router.push("/protected/user/create")}>
             <CirclePlus />
-            Нэмэх
+            Add
           </Button>
         </div>
 

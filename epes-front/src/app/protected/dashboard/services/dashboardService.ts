@@ -156,7 +156,7 @@ export async function fetchDashboardData(
     }));
   } else if (role === "EMPLOYEE") {
     const response = await req.GET(
-      `/protected/kpi/self?userId=${filter.userId}`,
+      `/protected/kpi/kpi/${filter.userId}`,
       token
     );
     kpis = [

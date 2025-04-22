@@ -112,7 +112,7 @@ export default function ProjectsPage() {
           {(isAdmin || isManager) && (
             <Button onClick={() => setIsCreateModalOpen(true)}>
               <CirclePlus />
-              Нэмэх
+              Add
             </Button>
           )}
           {(isAdmin || isManager) && (

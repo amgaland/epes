@@ -303,7 +303,7 @@ export default function UserFormPage() {
             <UserDepartments userId={id!} />
             <div>
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Уншиж байна..." : id ? "Засах" : "Нэмэх"}
+                {loading ? "Уншиж байна..." : id ? "Засах" : "Add"}
               </Button>
             </div>
           </form>

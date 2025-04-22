@@ -141,7 +141,7 @@ export default function DepartmentFormPage() {
       <Card>
         <CardHeader>
           <CardTitle className="text-2xl">
-            {id ? "Department Засах" : "Department Нэмэх"}
+            {id ? "Department Засах" : "Department Add"}
           </CardTitle>
         </CardHeader>
         <form onSubmit={handleSubmit}>
@@ -165,7 +165,7 @@ export default function DepartmentFormPage() {
           </CardContent>
           <CardFooter className="flex flex-col gap-4">
             <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Боловсруулж байна..." : id ? "Хадгалах" : "Нэмэх"}
+              {loading ? "Боловсруулж байна..." : id ? "Хадгалах" : "Add"}
             </Button>
             {id && (
               <Dialog
