@@ -32,7 +32,7 @@ export function useTaskForm(taskId?: string) {
         title: "Error",
         description: "Authentication token missing. Please log in again.",
       });
-      router.push("/login");
+      router.push("/auth/signin");
       return;
     }
 
@@ -136,7 +136,7 @@ export function useTaskForm(taskId?: string) {
           title: "Error",
           description: "Authentication token missing. Please log in again.",
         });
-        router.push("/login");
+        router.push("/auth/signin");
         return;
       }
 
@@ -186,7 +186,9 @@ export function useTaskForm(taskId?: string) {
         toast({
           variant: "destructive",
           title: "Error",
-          description: `Failed to ${taskId ? "update" : "create"} task: ${error.message}`,
+          description: `Failed to ${taskId ? "update" : "create"} task: ${
+            error.message
+          }`,
         });
       } finally {
         setIsSubmitting(false);
@@ -202,7 +204,7 @@ export function useTaskForm(taskId?: string) {
         title: "Error",
         description: "Authentication token missing or invalid task ID.",
       });
-      router.push("/login");
+      router.push("/auth/signin");
       return;
     }
 

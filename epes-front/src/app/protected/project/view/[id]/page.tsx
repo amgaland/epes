@@ -86,7 +86,7 @@ const ViewProjectPage: React.FC = () => {
     const fetchProjectAndUsers = async () => {
       if (!session?.user?.token) {
         alert("Authentication token missing. Please log in again.");
-        router.push("/login");
+        router.push("/auth/signin");
         return;
       }
 
@@ -220,7 +220,7 @@ const ViewProjectPage: React.FC = () => {
   }
 
   if (status === "unauthenticated" || !session) {
-    router.push("/login");
+    router.push("/auth/signin");
     return null;
   }
 
@@ -374,7 +374,9 @@ const ViewProjectPage: React.FC = () => {
                       </Label>
                       <div className="flex items-center gap-2">
                         <Badge
-                          className={`${getStatusColor(project.status)} text-white`}
+                          className={`${getStatusColor(
+                            project.status
+                          )} text-white`}
                         >
                           {project.status}
                         </Badge>

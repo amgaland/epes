@@ -157,7 +157,7 @@ const KPIPage: React.FC = () => {
           description: "Authentication token missing. Please log in again.",
           variant: "destructive",
         });
-        router.push("/login");
+        router.push("/auth/signin");
         return;
       }
 
@@ -283,7 +283,7 @@ const KPIPage: React.FC = () => {
   }
 
   if (status === "unauthenticated" || !session) {
-    router.push("/login");
+    router.push("/auth/signin");
     return null;
   }
 

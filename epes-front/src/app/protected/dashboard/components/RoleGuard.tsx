@@ -23,7 +23,7 @@ export function RoleGuard({ allowedRoles, children }: RoleGuardProps) {
 
   useEffect(() => {
     if (status === "unauthenticated") {
-      router.push("/login");
+      router.push("/auth/signin");
     } else if (
       status === "authenticated" &&
       !roles.some((r) => allowedRoles.includes(r as Role))

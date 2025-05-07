@@ -30,7 +30,7 @@ export function useTasks() {
         title: "Error",
         description: "Authentication token missing. Please log in again.",
       });
-      router.push("/login");
+      router.push("/auth/signin");
       return;
     }
 

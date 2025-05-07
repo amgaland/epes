@@ -37,7 +37,7 @@ export default function TaskViewPage() {
           title: "Error",
           description: "Authentication token missing. Please log in again.",
         });
-        router.push("/login");
+        router.push("/auth/signin");
         return;
       }
 
@@ -142,7 +142,7 @@ export default function TaskViewPage() {
   }
 
   if (status === "unauthenticated" || !session) {
-    router.push("/login");
+    router.push("/auth/signin");
     return null;
   }
 
@@ -252,8 +252,8 @@ export default function TaskViewPage() {
                           task.status === "Completed"
                             ? "secondary"
                             : task.status === "In Progress"
-                              ? "default"
-                              : "outline"
+                            ? "default"
+                            : "outline"
                         }
                       >
                         {task.status}
@@ -266,8 +266,8 @@ export default function TaskViewPage() {
                           task.priority === "High"
                             ? "bg-red-100 text-red-800"
                             : task.priority === "Medium"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-green-100 text-green-800"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-green-100 text-green-800"
                         }`}
                       >
                         {task.priority}
