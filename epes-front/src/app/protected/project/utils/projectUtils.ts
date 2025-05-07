@@ -38,13 +38,33 @@ export const sortProjects = (
 export const filterProjects = (
   projects: Project[],
   searchTerm: string,
-  filterStatus: string
+  filterStatus: "All" | "Active" | "Pending" | "Completed" | "My Projects",
+  userId?: string
 ): Project[] => {
-  return projects.filter(
-    (project) =>
-      project.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (filterStatus === "All" || project.status === filterStatus)
-  );
+  let filtered = projects;
+
+  // Apply status filter
+  if (filterStatus !== "All") {
+    if (filterStatus === "My Projects") {
+      if (userId) {
+        filtered = filtered.filter((project) =>
+          project.teamMembers?.some((member) => member.user_id === userId)
+        );
+      }
+    } else {
+      filtered = filtered.filter((project) => project.status === filterStatus);
+    }
+  }
+
+  // Apply search filter
+  if (searchTerm) {
+    const lowerSearch = searchTerm.toLowerCase();
+    filtered = filtered.filter((project) =>
+      project.name.toLowerCase().includes(lowerSearch)
+    );
+  }
+
+  return filtered;
 };
 
 export const exportToCSV = (projects: Project[]) => {

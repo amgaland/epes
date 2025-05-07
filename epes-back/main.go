@@ -22,12 +22,7 @@ func main() {
     log.Println("Initializing database connection...")
     config.ConnectDatabase()
 
-    if seed := os.Getenv("SEED_DB"); seed == "true" {
-		log.Println("Seeding database...")
-		if err := config.SeedDatabase(config.DB); err != nil {
-			log.Fatalf("Failed to seed database: %v", err)
-		}
-	}
+   
 
     router := gin.Default()
 

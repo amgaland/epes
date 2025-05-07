@@ -1,3 +1,4 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import { Nav } from "@/components/ui/nav";
 import {
@@ -5,13 +6,10 @@ import {
   Users,
   Sun,
   Moon,
-  ShoppingCart,
   User,
   ScanFace,
   ListCheck,
   NotebookPen,
-  BookText,
-  House,
   LucideIcon,
 } from "lucide-react";
 import { useTheme } from "next-themes";
@@ -22,8 +20,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { useRouter } from "next/navigation";
 
-// Define types
 interface UserProfile {
   id?: string;
   username?: string;
@@ -44,7 +42,6 @@ interface NavLink {
   permission: string;
 }
 
-// Role permissions
 const ROLE_PERMISSIONS: Record<string, string[]> = {
   admin: [
     "dashboard",
@@ -56,14 +53,18 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "tasks",
     "kpi",
     "department",
+    "employees",
   ],
-  manager: ["dashboard", "users", "document", "projects", "tasks"],
+  manager: ["dashboard", "users", "projects", "tasks"],
   employee: ["dashboard", "projects", "tasks"],
 };
 
 const ProfileSection: React.FC<{ profile: UserProfile }> = ({ profile }) => {
+  const router = useRouter();
   const fullName = `${profile?.lastname?.[0] || ""}.${profile?.firstname || ""}`;
-  const role = profile?.roles || "";
+  const role = Array.isArray(profile?.roles)
+    ? profile.roles.join(", ")
+    : profile?.roles || "User";
 
   return (
     <DropdownMenu>
@@ -77,17 +78,25 @@ const ProfileSection: React.FC<{ profile: UserProfile }> = ({ profile }) => {
         </div>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end">
+        <DropdownMenuItem
+          onClick={() =>
+            profile?.id
+              ? router.push(`/protected/user/${profile.id}`)
+              : router.push("/auth/signin")
+          }
+          disabled={!profile?.id}
+        >
+          View Profile
+        </DropdownMenuItem>
         <DropdownMenuItem className="text-red-600" onClick={() => signOut()}>
-          Гарах
+          Sign Out
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
 };
 
-const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
-  roles,
-}) => {
+const Navigation: React.FC<{ roles: string[] }> = ({ roles }) => {
   const navLinks: NavLink[] = [
     {
       title: "Dashboard",
@@ -114,19 +123,19 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
       permission: "tasks",
     },
     {
-      title: "Role",
+      title: "Roles",
       href: "/protected/role",
       icon: ScanFace,
       permission: "role",
     },
     {
-      title: "Үйлдэл",
+      title: "Actions",
       href: "/protected/action",
       icon: ListCheck,
       permission: "action",
     },
     {
-      title: "Үйлдэлийн түүх",
+      title: "Action History",
       href: "/protected/action-history",
       icon: NotebookPen,
       permission: "action-history",
@@ -138,26 +147,23 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
       permission: "kpi",
     },
     {
-      title: "Deparments",
+      title: "Departments",
       href: "/protected/department",
       icon: NotebookPen,
       permission: "department",
     },
+    {
+      title: "Employees",
+      href: "/protected/employee",
+      icon: NotebookPen,
+      permission: "employees",
+    },
   ];
 
-  // Normalize roles to always be an array
-  const normalizedRoles: string[] = roles
-    ? Array.isArray(roles)
-      ? roles
-      : [roles]
-    : [];
-
-  // Get permissions based on user's roles
-  const userPermissions = normalizedRoles
+  const userPermissions = roles
     .flatMap((role) => ROLE_PERMISSIONS[role.toLowerCase()] || [])
     .filter((value, index, self) => self.indexOf(value) === index);
 
-  // Filter navigation links based on user permissions
   const filteredNavLinks = navLinks.filter((link) =>
     userPermissions.includes(link.permission)
   );
@@ -168,26 +174,21 @@ const Navigation: React.FC<{ roles: string | string[] | undefined }> = ({
 const SideBar: React.FC = () => {
   const { data: session, status } = useSession();
   const { theme, setTheme } = useTheme();
-
   const toggleTheme = () => setTheme(theme === "dark" ? "light" : "dark");
 
-  // Handle loading state
   if (status === "loading") {
-    return (
-      <div className="h-screen w-[220px] bg-background dark:bg-background-dark animate-pulse" />
-    );
+    return <div className="h-screen w-[220px] bg-background animate-pulse" />;
   }
 
-  // Normalize roles from session
   const userRoles: string[] = session?.user?.roles
     ? Array.isArray(session.user.roles)
-      ? (session.user.roles as string[])
-      : [session.user.roles as string]
+      ? session.user.roles
+      : [session.user.roles]
     : [];
 
   return (
-    <div className="h-screen flex flex-col justify-between px-2 py-4 w-[220px] bg-background dark:bg-background-dark">
-      <div className="mt-6 ">
+    <div className="h-screen flex flex-col justify-between px-2 py-4 w-[220px] bg-background">
+      <div className="mt-6">
         <Navigation roles={userRoles} />
       </div>
       <div className="space-y-4">
@@ -205,7 +206,7 @@ const SideBar: React.FC = () => {
             <Moon className="h-5 w-5" />
           )}
           <span className="ml-2">
-            {theme === "dark" ? "Light" : "Dark"} Mode
+            {theme === "dark" ? "Light Mode" : "Dark Mode"}
           </span>
         </Button>
       </div>

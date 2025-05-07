@@ -53,4 +53,5 @@ func ConnectDatabase() {
 	DB.AutoMigrate(&models.EmployeeCompetencyRating{})
 	DB.AutoMigrate(&models.EmployeeKPI{})
 	DB.AutoMigrate(&models.UserDepartment{})
+	DB.AutoMigrate(&models.Feedback{})
 }

@@ -2,96 +2,93 @@ package controllers
 
 import (
 	"net/http"
+	"time"
 
-	services "github.com/amgaland/epes/epes-back/services/protected"
+	"github.com/amgaland/epes/epes-back/config"
+	"github.com/amgaland/epes/epes-back/models"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 )
 
-// GetAllKPIs handles GET /protected/kpi
-func GetAllKPIs(c *gin.Context) {
-	kpis, err := services.GetAllKPIs(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch KPIs: " + err.Error()})
+func CreateKPI(c *gin.Context) {
+	var kpi models.KPI
+	if err := c.ShouldBindJSON(&kpi); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	kpi.ID = uuid.New().String()
+	kpi.CreatedAt = time.Now()
+	if err := config.DB.Create(&kpi).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, kpi)
+}
+
+func CreateEmployeeKPI(c *gin.Context) {
+	var empKPI models.EmployeeKPI
+	if err := c.ShouldBindJSON(&empKPI); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	empKPI.ID = uuid.New().String()
+	empKPI.EvaluatedAt = time.Now()
+
+	// Optionally calculate status based on score
+	score := empKPI.PerformanceScore
+	if score >= 90 {
+		empKPI.Status = "Excellent"
+	} else if score >= 75 {
+		empKPI.Status = "Good"
+	} else {
+		empKPI.Status = "Needs Improvement"
+	}
+
+	if err := config.DB.Create(&empKPI).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusCreated, empKPI)
+}
+
+func GetEmployeeKPIs(c *gin.Context) {
+	var kpis []models.EmployeeKPI
+	if err := config.DB.Preload("Employee").Find(&kpis).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, kpis)
 }
 
-// GetKPI handles GET /protected/kpi/{id}
-func GetKPI(c *gin.Context) {
+func GetEmployeeKPIByID(c *gin.Context) {
 	id := c.Param("id")
-	kpi, err := services.GetKPI(c, id)
-	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Failed to fetch KPI: " + err.Error()})
+	var kpi models.EmployeeKPI
+	if err := config.DB.Preload("Employee").First(&kpi, "employee_id = ?", id).Error; err != nil {
+		c.JSON(http.StatusNotFound, gin.H{"error": "KPI not found"})
 		return
 	}
 	c.JSON(http.StatusOK, kpi)
 }
 
-// CreateKPI handles POST /protected/kpi
-func CreateKPI(c *gin.Context) {
-	var kpi services.KPIResponse
-	if err := c.ShouldBindJSON(&kpi); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
-		return
-	}
-
-	if kpi.EmployeeID == "" {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid KPI data: employee_id is required"})
-		return
-	}
-
-	created, err := services.CreateKPI(c, kpi)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to create KPI: " + err.Error()})
-		return
-	}
-	c.JSON(http.StatusCreated, created)
-}
-
-// UpdateKPI handles PUT /protected/kpi/{id}
-func UpdateKPI(c *gin.Context) {
+func UpdateEmployeeKPI(c *gin.Context) {
 	id := c.Param("id")
-	var kpi services.KPIResponse
-	if err := c.ShouldBindJSON(&kpi); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid request body: " + err.Error()})
+	var updatedKPI models.EmployeeKPI
+	if err := c.ShouldBindJSON(&updatedKPI); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-
-	updated, err := services.UpdateKPI(c, id, kpi)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to update KPI: " + err.Error()})
+	if err := config.DB.Model(&models.EmployeeKPI{}).Where("employee_id = ?", id).Updates(&updatedKPI).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, updated)
+	c.JSON(http.StatusOK, gin.H{"message": "KPI updated successfully"})
 }
 
-// DeleteKPI handles DELETE /protected/kpi/{id}
-func DeleteKPI(c *gin.Context) {
+func DeleteEmployeeKPI(c *gin.Context) {
 	id := c.Param("id")
-	if err := services.DeleteKPI(c, id); err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "Failed to delete KPI: " + err.Error()})
+	if err := config.DB.Where("employee_id = ?", id).Delete(&models.EmployeeKPI{}).Error; err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-	c.Status(http.StatusNoContent)
-}
-
-// GetTasks handles GET /protected/tasks
-func GetTasks(c *gin.Context) {
-	tasks, err := services.GetTasks(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch tasks: " + err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, tasks)
-}
-
-// GetProjects handles GET /protected/projects
-func GetProjects(c *gin.Context) {
-	projects, err := services.GetProjects(c)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to fetch projects: " + err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, projects)
+	c.JSON(http.StatusOK, gin.H{"message": "KPI deleted successfully"})
 }

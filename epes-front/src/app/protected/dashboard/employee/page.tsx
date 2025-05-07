@@ -1,55 +1,98 @@
-// src/app/protected/dashboard/employee/page.tsx
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { EmployeeDashboard } from "../components/EmployeeDashboard";
-import { fetchDashboardData } from "../services/dashboardService";
-import { DashboardData } from "../types";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { KPIStat } from "../components/kpi/KPIStat"; // You can make this reusable
+import { fetchEmployeeKPIs } from "../../kpi/services/kpiService";
+import { EmployeeKPI } from "../../kpi/types";
 
-export default function EmployeeDashboardPage() {
+const EmployeeDashboard: React.FC = () => {
   const { data: session, status } = useSession();
+  const router = useRouter();
   const { toast } = useToast();
-  const [data, setData] = useState<DashboardData>({ kpis: [], stats: [] });
-  const [isLoading, setIsLoading] = useState(true);
+  const [kpi, setKPI] = useState<EmployeeKPI | null>(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchData = async () => {
+    const loadKPI = async () => {
       if (!session?.user?.token || !session?.user?.id) {
         toast({
-          title: "Authentication Error",
-          description: "Authentication token or user ID missing.",
+          title: "Unauthorized",
+          description: "Please login again.",
           variant: "destructive",
         });
+        router.push("/login");
         return;
       }
 
       try {
-        setIsLoading(true);
-        const dashboardData = await fetchDashboardData(
-          "EMPLOYEE",
-          session.user.token,
-          {
-            userId: session.user.id,
-          }
-        );
-        setData(dashboardData);
-      } catch (error: any) {
+        const result = await fetchEmployeeKPIs(session.user.id);
+        setKPI(result[0]);
+      } catch (err: any) {
+        console.error(err);
         toast({
           title: "Error",
-          description: "Failed to load dashboard: " + error.message,
+          description: "Failed to load your KPI data.",
           variant: "destructive",
         });
       } finally {
-        setIsLoading(false);
+        setLoading(false);
       }
     };
 
-    if (status === "authenticated") {
-      fetchData();
-    }
-  }, [session, status, toast]);
+    if (session) loadKPI();
+  }, [session, router, toast]);
 
-  return <EmployeeDashboard data={data} isLoading={isLoading} />;
-}
+  if (status === "loading" || loading) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <Skeleton className="h-8 w-[200px] mb-4" />
+        <Skeleton className="h-40 w-full" />
+      </div>
+    );
+  }
+
+  if (!kpi) {
+    return (
+      <div className="p-6 max-w-3xl mx-auto">
+        <p className="text-center text-muted-foreground">
+          No KPI data available.
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-3xl mx-auto">
+      <Card>
+        <CardHeader>
+          <CardTitle>Your KPI Overview</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <KPIStat label="Tasks Completed" value={kpi.tasksCompleted} />
+          <KPIStat label="Tasks Assigned" value={kpi.tasksAssigned} />
+          <KPIStat
+            label="Task Completion Rate"
+            value={`${kpi.taskCompletionRate}%`}
+          />
+          <KPIStat label="Projects Assigned" value={kpi.projectsAssigned} />
+          <KPIStat
+            label="Project Contribution"
+            value={`${kpi.projectContribution}%`}
+          />
+          <KPIStat
+            label="Performance Score"
+            value={`${kpi.performanceScore}`}
+          />
+          <KPIStat label="Status" value={kpi.status} />
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
+export default EmployeeDashboard;

@@ -1,15 +1,9 @@
 import { req } from "@/app/api";
 import { Project } from "../types";
 
-export const fetchProjects = async (
-  token: string,
-  isEmployeeOnly: boolean
-): Promise<Project[]> => {
-  const endpoint = isEmployeeOnly
-    ? "/protected/projects/employee"
-    : "/protected/projects";
+export const fetchProjects = async (token: string): Promise<Project[]> => {
   try {
-    const response = await req.GET(endpoint, token);
+    const response = await req.GET("/protected/projects", token);
     return response.map((p: any) => ({
       id: p.id,
       name: p.name,

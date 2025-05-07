@@ -71,7 +71,7 @@ export const authOptions: NextAuthOptions = {
               is_active: response.data.is_active,
               active_start_date: response.data.active_start_date,
               active_end_date: response.data.active_end_date,
-              department: response.data.department || "", // Add department, default to empty string if not provided
+              department: response.data.department || "",
             };
             return user;
           } else {

@@ -3,7 +3,7 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { fetchProjects } from "../api/projects";
 import { Project, ProjectStat, SessionUser } from "../types";
-import { Folder, Calendar, Users, Clock } from "lucide-react"; // Add this import
+import { Folder, Calendar, Users, Clock } from "lucide-react";
 
 export const useProjects = () => {
   const { data: session, status } = useSession();
@@ -32,19 +32,8 @@ export const useProjects = () => {
 
       try {
         setIsLoading(true);
-        let fetchedProjects = await fetchProjects(
-          session.user.token,
-          isEmployeeOnly
-        );
-
-        // Filter projects for employees
-        if (isEmployeeOnly) {
-          fetchedProjects = fetchedProjects.filter((project) =>
-            project.teamMembers?.some(
-              (member) => member.user_id === (session.user as SessionUser).id
-            )
-          );
-        }
+        // Fetch all projects (remove isEmployeeOnly filter)
+        const fetchedProjects = await fetchProjects(session.user.token);
 
         setProjects(fetchedProjects);
 
@@ -110,7 +99,7 @@ export const useProjects = () => {
     if (session) {
       loadProjects();
     }
-  }, [session, router, isEmployeeOnly]);
+  }, [session, router]);
 
   return {
     session,

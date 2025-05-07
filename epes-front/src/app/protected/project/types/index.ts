@@ -16,11 +16,22 @@ export interface Project {
 
 export type ViewMode = "table" | "grid" | "list";
 export type SortDirection = "asc" | "desc";
-export type FilterStatus = "All" | "Active" | "Pending" | "Completed";
+export type FilterStatus =
+  | "All"
+  | "Active"
+  | "Pending"
+  | "Completed"
+  | "My Projects";
 export type Role = "ADMIN" | "MANAGER" | "EMPLOYEE";
 
 export interface SessionUser {
   id: string;
   token: string;
   roles: Role | Role[];
+}
+
+export interface Employee {
+  id: string;
+  name: string;
+  profileImg?: string;
 }

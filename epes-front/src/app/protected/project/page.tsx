@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState } from "react"; // Ensure useState is imported first
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -24,7 +24,7 @@ import {
   exportToCSV,
 } from "../project/utils/projectUtils";
 import { Project } from "./types";
-import CreateProjectModal from "./create/page"; // Import the modal component
+import CreateProjectModal from "./create/page";
 
 export default function ProjectsPage() {
   const {
@@ -43,12 +43,12 @@ export default function ProjectsPage() {
   const [viewMode, setViewMode] = useState<"table" | "grid" | "list">("table");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [sortField, setSortField] = useState<keyof Project | null>(null);
+  const [sortField, setSortField] = useState<keyof Project | null>(null); // Fixed typo from кадровField
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filterStatus, setFilterStatus] = useState<
-    "All" | "Active" | "Pending" | "Completed"
-  >("All");
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false); // State for modal
+    "All" | "Active" | "Pending" | "Completed" | "My Projects"
+  >(isEmployeeOnly ? "My Projects" : "All");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
   if (status === "loading") {
     return (
@@ -96,7 +96,8 @@ export default function ProjectsPage() {
   const filteredProjects = filterProjects(
     sortedProjects,
     searchTerm,
-    filterStatus
+    filterStatus,
+    session.user.id
   );
 
   return (
@@ -157,30 +158,42 @@ export default function ProjectsPage() {
 
           {/* Quick Filters */}
           <div className="flex gap-2 mb-6">
-            <Button
-              variant={filterStatus === "All" ? "default" : "outline"}
-              onClick={() => setFilterStatus("All")}
-            >
-              All
-            </Button>
-            <Button
-              variant={filterStatus === "Active" ? "default" : "outline"}
-              onClick={() => setFilterStatus("Active")}
-            >
-              Active
-            </Button>
-            <Button
-              variant={filterStatus === "Pending" ? "default" : "outline"}
-              onClick={() => setFilterStatus("Pending")}
-            >
-              Pending
-            </Button>
-            <Button
-              variant={filterStatus === "Completed" ? "default" : "outline"}
-              onClick={() => setFilterStatus("Completed")}
-            >
-              Completed
-            </Button>
+            {!isEmployeeOnly && (
+              <>
+                <Button
+                  variant={filterStatus === "All" ? "default" : "outline"}
+                  onClick={() => setFilterStatus("All")}
+                >
+                  All
+                </Button>
+                <Button
+                  variant={filterStatus === "Active" ? "default" : "outline"}
+                  onClick={() => setFilterStatus("Active")}
+                >
+                  Active
+                </Button>
+                <Button
+                  variant={filterStatus === "Pending" ? "default" : "outline"}
+                  onClick={() => setFilterStatus("Pending")}
+                >
+                  Pending
+                </Button>
+                <Button
+                  variant={filterStatus === "Completed" ? "default" : "outline"}
+                  onClick={() => setFilterStatus("Completed")}
+                >
+                  Completed
+                </Button>
+              </>
+            )}
+            {(isEmployee || isEmployeeOnly) && (
+              <Button
+                variant={filterStatus === "My Projects" ? "default" : "outline"}
+                onClick={() => setFilterStatus("My Projects")}
+              >
+                My Projects
+              </Button>
+            )}
           </div>
 
           {/* Project Stats */}
@@ -216,6 +229,12 @@ export default function ProjectsPage() {
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-32 w-full" />
                 </div>
+              ) : filteredProjects.length === 0 ? (
+                <p className="text-center text-muted-foreground">
+                  {filterStatus === "My Projects"
+                    ? "No projects assigned to you."
+                    : "No projects match the current filters."}
+                </p>
               ) : (
                 <>
                   {viewMode === "table" && (
@@ -250,8 +269,7 @@ export default function ProjectsPage() {
             onClose={() => setIsCreateModalOpen(false)}
             onSuccess={() => {
               setIsCreateModalOpen(false);
-              // Optionally refresh projects list
-              router.refresh(); // Or call a function to refetch projects
+              router.refresh();
             }}
           />
         )}

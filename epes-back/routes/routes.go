@@ -98,16 +98,43 @@ func RegisterRoutes(router *gin.Engine) {
             projectRoutes.PUT("/:id", protected.UpdateProject)
             projectRoutes.DELETE("/:id", protected.DeleteProject)
             projectRoutes.GET("/tasks/:id", protected.GetAllProjectTasks)
+        }
+
+        projectMemberRoutes := projectRoutes.Group("/members")
+        {
+            projectMemberRoutes.GET("/project/member", protected.GetProjectMember)
+            projectMemberRoutes.POST("/project/member", protected.CreateProjectMember)
+            projectMemberRoutes.DELETE("/project/member/:id", protected.DeleteProjectMember)
 
         }
+
         kpiRoutes := protectedRoutes.Group("/kpi")
         {
-            kpiRoutes.GET("/kpi", protected.GetAllKPIs)
-	        kpiRoutes.GET("/kpi/:id", protected.GetKPI)
-	        kpiRoutes.POST("/kpi", protected.CreateKPI)
-	        kpiRoutes.PUT("/kpi/:id", protected.UpdateKPI)
-	        kpiRoutes.DELETE("/kpi/:id", protected.DeleteKPI)
-
+            kpiRoutes.POST("/", protected.CreateKPI)
+            kpiRoutes.POST("/employee-kpi", protected.CreateEmployeeKPI)
+            kpiRoutes.POST("/employee-kpi/:id", protected.CreateEmployeeKPI)
+            kpiRoutes.GET("/", protected.GetEmployeeKPIs)
+            kpiRoutes.GET("/employee-kpi/:id", protected.GetEmployeeKPIByID)
+            kpiRoutes.DELETE("/employee-kpi/:id", protected.DeleteEmployeeKPI)
+            kpiRoutes.PUT("/employee-kpi/:id", protected.UpdateEmployeeKPI)
+        }
+        employeeRoutes := protectedRoutes.Group("/employees")
+        {
+            employeeRoutes.GET("/", protected.GetAllEmployees)
+            employeeRoutes.POST("/", protected.CreateEmployee)
+            employeeRoutes.PUT("/:id", protected.UpdateEmployee)
+            employeeRoutes.DELETE("/:id", protected.DeleteEmployee)
+            employeeRoutes.GET("/:id", protected.GetEmployeeByID)
+            
+        }
+        feedbackRoutes := protectedRoutes.Group("/feedback")
+        {
+            feedbackRoutes.GET("/", protected.GetAllFeedback)
+            feedbackRoutes.POST("/", protected.CreateFeedback)
+            feedbackRoutes.PUT("/:id", protected.UpdateFeedback)
+            feedbackRoutes.DELETE("/:id", protected.DeleteFeedback)
+            feedbackRoutes.GET("/:id", protected.GetFeedbackByID)
+            
         }
     }
 
