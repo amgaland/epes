@@ -9,8 +9,8 @@ export interface EmployeeKPI {
   projectsAssigned: number;
   performanceScore: number;
   status: "Excellent" | "Good" | "Needs Improvement";
-  tasks?: { id: string; title: string; status: string; dueDate: string }[];
-  projects?: { id: string; name: string; progress: number }[];
+  tasks: { id: string; title: string; status: string; dueDate: string }[];
+  projects: { id: string; name: string; progress: number }[];
 }
 
 export interface KPIStat {

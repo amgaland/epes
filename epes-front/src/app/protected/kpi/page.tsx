@@ -1,3 +1,4 @@
+// src/app/protected/kpi/page.tsx
 "use client";
 
 import { useState, useEffect, useMemo, useCallback } from "react";
@@ -38,7 +39,7 @@ import {
 } from "./utils/kpiUtils";
 import { EmployeeKPI, KPIStat, ReportConfig } from "./types";
 
-// Custom debounce function to avoid lodash dependency
+// Custom debounce function
 const debounce = <F extends (...args: any[]) => void>(
   func: F,
   wait: number
@@ -55,6 +56,7 @@ const KPIPage: React.FC = () => {
   const router = useRouter();
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(true);
+  const [isRecalculating, setIsRecalculating] = useState(false);
   const [viewMode, setViewMode] = useState<"table" | "grid" | "list">("table");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInput, setSearchInput] = useState("");
@@ -76,7 +78,7 @@ const KPIPage: React.FC = () => {
     includeComments: false,
   });
 
-  // Centralized KPI metrics calculation
+  // Calculate KPI metrics
   const calculateKPIMetrics = useCallback((kpiData: EmployeeKPI[]) => {
     const excellentPerformers = kpiData.filter(
       (k) => k.status === "Excellent"
@@ -109,20 +111,13 @@ const KPIPage: React.FC = () => {
           icon: BarChart,
         },
       ],
-      metrics: {
-        totalEmployees,
-        excellentPerformers,
-        avgPerformanceScore,
-      },
+      metrics: { totalEmployees, excellentPerformers, avgPerformanceScore },
     };
   }, []);
 
   // Debounced search handler
   const debouncedSearch = useMemo(
-    () =>
-      debounce((value: string) => {
-        setSearchTerm(value);
-      }, 300),
+    () => debounce((value: string) => setSearchTerm(value), 300),
     []
   );
 
@@ -136,7 +131,7 @@ const KPIPage: React.FC = () => {
     [debouncedSearch]
   );
 
-  // Reset all filters
+  // Reset filters
   const resetFilters = useCallback(() => {
     setSearchInput("");
     setSearchTerm("");
@@ -149,8 +144,9 @@ const KPIPage: React.FC = () => {
     });
   }, [toast]);
 
-  useEffect(() => {
-    const fetchData = async () => {
+  // Fetch KPIs
+  const fetchData = useCallback(
+    async (recalculate: boolean = false) => {
       if (!session?.user?.token) {
         toast({
           title: "Authentication Error",
@@ -163,16 +159,35 @@ const KPIPage: React.FC = () => {
 
       try {
         setIsLoading(true);
-        const kpiData = await fetchEmployeeKPIs(session.user.token);
+        if (recalculate) setIsRecalculating(true);
+        let kpiData = await fetchEmployeeKPIs(session.user.token, recalculate);
+        if (!recalculate && kpiData.length === 0) {
+          console.log("No KPIs found, recalculating...");
+          toast({
+            title: "No Data",
+            description: "No KPIs found in database. Recalculating...",
+          });
+          kpiData = await fetchEmployeeKPIs(session.user.token, true);
+        }
+        console.log("Fetched KPIs:", kpiData); // Debug log
         setKPIs(kpiData);
 
         const { stats } = calculateKPIMetrics(kpiData);
         setStats(stats);
+
+        if (recalculate || kpiData.length > 0) {
+          toast({
+            title: "Success",
+            description: recalculate
+              ? "KPIs recalculated successfully."
+              : "KPIs loaded successfully.",
+          });
+        }
       } catch (error: any) {
         console.error("Failed to fetch KPIs:", error);
         toast({
           title: "Error",
-          description: "Failed to load KPIs: " + error.message,
+          description: `Failed to ${recalculate ? "recalculate" : "load"} KPIs: ${error.message}`,
           variant: "destructive",
         });
         setKPIs([]);
@@ -184,14 +199,23 @@ const KPIPage: React.FC = () => {
         ]);
       } finally {
         setIsLoading(false);
+        if (recalculate) setIsRecalculating(false);
       }
-    };
+    },
+    [session, router, toast, calculateKPIMetrics]
+  );
 
-    if (session) {
-      fetchData();
-    }
-  }, [session, router, toast, debouncedSearch, calculateKPIMetrics]);
+  // Initial data fetch
+  useEffect(() => {
+    if (session) fetchData(false);
+  }, [session, fetchData]);
 
+  // Handle recalculation
+  const handleRecalculate = useCallback(() => {
+    fetchData(true);
+  }, [fetchData]);
+
+  // Check admin role
   const roles = session?.user?.roles
     ? Array.isArray(session.user.roles)
       ? session.user.roles
@@ -245,7 +269,7 @@ const KPIPage: React.FC = () => {
       console.error("Failed to delete KPI:", error);
       toast({
         title: "Error",
-        description: "Failed to delete KPI: " + error.message,
+        description: `Failed to delete KPI: ${error.message}`,
         variant: "destructive",
       });
     } finally {
@@ -258,12 +282,12 @@ const KPIPage: React.FC = () => {
     () => sortKPIs(kpis, sortField, sortDirection),
     [kpis, sortField, sortDirection]
   );
-  const filteredKPIs = useMemo(
-    () => filterKPIs(sortedKPIs, searchTerm, filterStatus),
-    [sortedKPIs, searchTerm, filterStatus]
-  );
+  const filteredKPIs = useMemo(() => {
+    const result = filterKPIs(sortedKPIs, searchTerm, filterStatus);
+    console.log("Filtered KPIs:", result); // Debug log
+    return result;
+  }, [sortedKPIs, searchTerm, filterStatus]);
 
-  // Calculate metrics for Quick Info
   const { metrics } = useMemo(
     () => calculateKPIMetrics(kpis),
     [kpis, calculateKPIMetrics]
@@ -303,7 +327,7 @@ const KPIPage: React.FC = () => {
         {/* Search and Actions */}
         <Card className="sticky top-0 z-30 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <CardContent className="flex flex-col sm:flex-row items-center gap-4 p-4">
-            <div className="relative w-full sm:w-auto flex-1">
+            <div className="relative w litres://www.x.com/watch?v=2n6sJ8s0q0s&list=PLZHQObOWTQDPD3MizzM2xVFitgF8hE_ab full sm:w-auto flex-1">
               <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
               <Input
                 type="search"
@@ -320,8 +344,16 @@ const KPIPage: React.FC = () => {
               </Button>
               <Button
                 variant="outline"
+                onClick={handleRecalculate}
+                disabled={isLoading || isRecalculating}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                {isRecalculating ? "Recalculating..." : "Recalculate KPIs"}
+              </Button>
+              <Button
+                variant="outline"
                 onClick={() => exportToCSV(filteredKPIs)}
-                disabled={isLoading}
+                disabled={isLoading || filteredKPIs.length === 0}
               >
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
@@ -466,6 +498,11 @@ const KPIPage: React.FC = () => {
                   <Skeleton className="h-8 w-full" />
                   <Skeleton className="h-32 w-full" />
                 </div>
+              ) : filteredKPIs.length === 0 ? (
+                <p>
+                  No KPI data available. Try recalculating KPIs or check backend
+                  logs for errors.
+                </p>
               ) : (
                 <>
                   {viewMode === "table" && (
