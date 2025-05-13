@@ -1,5 +1,5 @@
 // src/app/protected/dashboard/types.ts
-import { EmployeeKPI } from "../kpi/types";
+import { EmployeeKPI } from "../evaluation/types";
 
 export type Role = "ADMIN" | "MANAGER" | "EMPLOYEE";
 

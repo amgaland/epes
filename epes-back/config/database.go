@@ -45,4 +45,8 @@ func ConnectDatabase() {
 	DB.AutoMigrate(&models.Task{})
 	DB.AutoMigrate(&models.TaskFeedback{})
 	DB.AutoMigrate(&models.UserDepartment{})
+	DB.AutoMigrate(&models.KPIMetric{})
+	DB.AutoMigrate(&models.KPIScore{})
+	DB.AutoMigrate(&models.Evaluation{})
+	DB.AutoMigrate(&models.OKR{})
 }

@@ -108,6 +108,24 @@ func RegisterRoutes(router *gin.Engine) {
 
         }
 
+        evaluationRoutes := protectedRoutes.Group("/evaluations")
+		{
+			evaluationRoutes.GET("/scores", protected.GetEvaluationScores)
+			evaluationRoutes.POST("/scores", protected.CreateKPIScore)
+			evaluationRoutes.POST("/feedback", protected.CreateTaskFeedback)
+			evaluationRoutes.GET("/tasks", protected.GetEvaluationTasks)
+			evaluationRoutes.POST("/reports", protected.CreateEvaluationReport)
+			evaluationRoutes.POST("/okrs", protected.CreateOKR)
+			evaluationRoutes.PUT("/tasks/completion", protected.UpdateTaskCompletionScore)
+		}
+
+        metricRoutes := protectedRoutes.Group("/metrics")
+		{
+			metricRoutes.GET("/", protected.GetAllMetrics)
+			metricRoutes.POST("/", protected.CreateMetric)
+			metricRoutes.PUT("/:id", protected.UpdateMetric)
+			metricRoutes.DELETE("/:id", protected.DeleteMetric)
+		}
     }
 
 }

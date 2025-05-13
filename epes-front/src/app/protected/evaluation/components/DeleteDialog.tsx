@@ -1,9 +1,7 @@
-// src/app/protected/kpi/components/DeleteDialog.tsx
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -15,21 +13,21 @@ interface DeleteDialogProps {
   onConfirm: () => void;
 }
 
-export function DeleteDialog({
+export const DeleteDialog: React.FC<DeleteDialogProps> = ({
   open,
   onOpenChange,
   onConfirm,
-}: DeleteDialogProps) {
+}) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Confirm Deletion</DialogTitle>
-          <DialogDescription>
-            Are you sure you want to delete this KPI record? This action cannot
-            be undone.
-          </DialogDescription>
         </DialogHeader>
+        <p>
+          Are you sure you want to delete this evaluation record? This action
+          cannot be undone.
+        </p>
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>
             Cancel
@@ -41,4 +39,4 @@ export function DeleteDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

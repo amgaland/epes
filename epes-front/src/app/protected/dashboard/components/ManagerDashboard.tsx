@@ -1,8 +1,8 @@
 // src/app/protected/dashboard/components/ManagerDashboard.tsx
 import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { KPIStats } from "../../kpi/components/KPIStats";
-import { KPITable } from "../../kpi/components/KPITable";
+import { KPIStats } from "../../evaluation/components/KPIStats";
+import { KPITable } from "../../evaluation/components/KPITable";
 import { KPIChart } from "./KPIChart";
 import { DashboardData } from "../types";
 import { getPerformanceChartData } from "../utils/dashboardUtils";

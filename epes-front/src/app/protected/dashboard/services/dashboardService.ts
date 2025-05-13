@@ -1,6 +1,6 @@
 // src/app/protected/dashboard/services/dashboardService.ts
 import { req } from "@/app/api";
-import { EmployeeKPI } from "../../kpi/types";
+import { EmployeeKPI } from "../../evaluation/types";
 import { DashboardData, TeamFilter } from "../types";
 import { BarChart, CheckCircle, Clock, Users } from "lucide-react";
 

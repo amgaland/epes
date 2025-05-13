@@ -19,7 +19,11 @@ import {
 } from "@/components/ui/select";
 import { ArrowLeft, Save, Trash2 } from "lucide-react";
 import { DeleteDialog } from "../../components/DeleteDialog";
-import { fetchKPIById, updateKPI, deleteKPI } from "../../services/kpiService";
+import {
+  fetchKPIById,
+  updateKPI,
+  deleteKPI,
+} from "../../services/evaluationService";
 import { EmployeeKPI } from "../../types";
 
 const EditKPIPage: React.FC = () => {

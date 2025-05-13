@@ -1,5 +1,5 @@
 // src/app/protected/dashboard/utils/dashboardUtils.ts
-import { EmployeeKPI } from "../../kpi/types";
+import { EmployeeKPI } from "../../evaluation/types";
 
 export function getPerformanceChartData(kpis: EmployeeKPI[]) {
   return kpis.map((kpi) => ({

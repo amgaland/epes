@@ -51,7 +51,7 @@ const ROLE_PERMISSIONS: Record<string, string[]> = {
     "action-history",
     "projects",
     "tasks",
-    "kpi",
+    "evaluation",
     "department",
     "employees",
   ],
@@ -135,16 +135,10 @@ const Navigation: React.FC<{ roles: string[] }> = ({ roles }) => {
       permission: "action",
     },
     {
-      title: "Action History",
-      href: "/protected/action-history",
+      title: "Evaluation",
+      href: "/protected/evaluation",
       icon: NotebookPen,
-      permission: "action-history",
-    },
-    {
-      title: "KPI",
-      href: "/protected/kpi",
-      icon: NotebookPen,
-      permission: "kpi",
+      permission: "evaluation",
     },
     {
       title: "Departments",

@@ -11,7 +11,6 @@ type Project struct {
 	Status         string          `json:"status"`        // e.g., "Ongoing", "Completed", "Delayed"
 	OwnerID        string          `json:"owner_id"`      // Reference to User
 	Owner          User            `json:"owner" gorm:"foreignKey:OwnerID;references:ID"`
-	// Relationship to team members
 	TeamMembers    []ProjectMember `json:"team_members" gorm:"foreignKey:ProjectID"`
 }
 

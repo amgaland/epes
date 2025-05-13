@@ -3,11 +3,11 @@ import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CirclePlus, Download } from "lucide-react";
-import { KPIStats } from "../../kpi/components/KPIStats";
-import { KPITable } from "../../kpi/components/KPITable";
+import { KPIStats } from "../../evaluation/components/KPIStats";
+import { KPITable } from "../../evaluation/components/KPITable";
 import { KPIChart } from "./KPIChart";
 import { DashboardData } from "../types";
-import { exportToCSV } from "../../kpi/utils/kpiUtils";
+import { exportToCSV } from "../../evaluation/utils/evaluationUtils";
 import { getPerformanceChartData } from "../utils/dashboardUtils";
 
 interface AdminDashboardProps {
