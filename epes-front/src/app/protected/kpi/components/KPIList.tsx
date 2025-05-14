@@ -1,15 +1,7 @@
 // src/app/protected/kpi/components/KPIList.tsx
-import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Edit, Trash2 } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Pencil, Trash2 } from "lucide-react";
 import { EmployeeKPI } from "../types";
 
 interface KPIListProps {
@@ -19,85 +11,64 @@ interface KPIListProps {
   onDelete: (employeeId: string) => void;
 }
 
-export function KPIList({ kpis, onClick, onEdit, onDelete }: KPIListProps) {
+export const KPIList: React.FC<KPIListProps> = ({
+  kpis,
+  onClick,
+  onEdit,
+  onDelete,
+}) => {
   return (
     <div className="space-y-4">
-      {kpis.length > 0 ? (
-        kpis.map((kpi) => (
-          <TooltipProvider key={kpi.employeeId}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card
-                  onClick={() => onClick(kpi.employeeId)}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
-                >
-                  <CardContent className="flex items-center justify-between p-4">
-                    <div className="space-y-1">
-                      <h3 className="text-lg font-medium">
-                        {kpi.employeeName}
-                      </h3>
-                      <p className="text-sm text-muted-foreground">
-                        Tasks: {kpi.tasksCompleted}/{kpi.tasksAssigned} |
-                        Projects: {kpi.projectsAssigned}
-                      </p>
-                      <Progress
-                        value={kpi.performanceScore}
-                        className="w-[200px]"
-                      />
-                    </div>
-                    <div className="flex flex-col items-end gap-2">
-                      <Badge
-                        variant={
-                          kpi.status === "Excellent"
-                            ? "secondary"
-                            : kpi.status === "Good"
-                              ? "default"
-                              : "outline"
-                        }
-                      >
-                        {kpi.status}
-                      </Badge>
-                      <p className="text-sm font-medium">
-                        Score: {kpi.performanceScore}
-                      </p>
-                      <div className="flex gap-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(kpi.employeeId);
-                          }}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(kpi.employeeId);
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Employee: {kpi.employeeName}</p>
-                <p>Performance Score: {kpi.performanceScore}</p>
-                <p>Tasks Completed: {kpi.tasksCompleted}</p>
-                <p>Projects Assigned: {kpi.projectsAssigned}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))
-      ) : (
-        <p className="text-center">No employee KPIs found.</p>
-      )}
+      {kpis.map((kpi) => (
+        <Card
+          key={kpi.employee_id}
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => onClick(kpi.employee_id)}
+        >
+          <CardContent className="p-4 flex justify-between items-center">
+            <div>
+              <h3 className="text-lg font-semibold">{kpi.employee_name}</h3>
+              <p className="text-sm text-muted-foreground">
+                Status: {kpi.status}
+              </p>
+              <p className="text-sm">
+                Tasks: {kpi.tasks_completed}/{kpi.tasks_assigned}
+              </p>
+              <p className="text-sm">Projects: {kpi.projects_assigned}</p>
+              <p className="text-sm">
+                Score:{" "}
+                {typeof kpi.performance_score === "number"
+                  ? kpi.performance_score.toFixed(1)
+                  : "N/A"}
+              </p>
+            </div>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(kpi.employee_id);
+                }}
+              >
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(kpi.employee_id);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
-}
+};

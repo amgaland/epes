@@ -3,34 +3,51 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchEmployeeKPIs, deleteKPI } from "../services/kpiService";
+import { fetchAllKPIs, deleteKPI } from "../services/kpiService";
 import { EmployeeKPI, KPIStat } from "../types";
 import { BarChart, CheckCircle, Clock, Users } from "lucide-react";
 
-/**
- * Custom hook to manage KPI data, including fetching, metrics calculation, and deletion.
- * @returns Object containing KPIs, stats, loading state, and delete function.
- */
 export const useKPI = () => {
   const { data: session } = useSession();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [kpis, setKPIs] = useState<EmployeeKPI[]>([]);
 
-  // Fetch KPIs using React Query
   const { isLoading, error } = useQuery<EmployeeKPI[], Error>({
     queryKey: ["kpis", session?.user?.token],
     queryFn: async () => {
-      if (!session?.user?.token)
+      if (!session?.user?.token) {
         throw new Error("Authentication token missing");
-      const data = await fetchEmployeeKPIs(session.user.token);
-      setKPIs(data);
-      return data;
+      }
+      const data = await fetchAllKPIs(session.user.token);
+      const validKPIs = data.filter(
+        (kpi): kpi is EmployeeKPI =>
+          kpi.employee_id !== undefined &&
+          kpi.employee_name !== undefined &&
+          kpi.task_completion_rate !== undefined &&
+          kpi.tasks_completed !== undefined &&
+          kpi.tasks_assigned !== undefined &&
+          kpi.project_contribution !== undefined &&
+          kpi.projects_assigned !== undefined &&
+          kpi.performance_score !== undefined &&
+          kpi.status !== undefined
+      );
+      setKPIs(validKPIs);
+      if (validKPIs.length < data.length) {
+        console.warn(
+          `Filtered out ${data.length - validKPIs.length} invalid KPIs`
+        );
+        toast({
+          title: "Warning",
+          description: `${data.length - validKPIs.length} KPIs were invalid and excluded.`,
+          variant: "default",
+        });
+      }
+      return validKPIs;
     },
-    enabled: !!session?.user?.token,
+    enabled: Boolean(session?.user?.token),
   });
 
-  // Handle errors from useQuery
   useEffect(() => {
     if (error) {
       toast({
@@ -42,15 +59,15 @@ export const useKPI = () => {
     }
   }, [error, toast]);
 
-  // Delete KPI mutation
   const deleteKPIMutation = useMutation({
     mutationFn: (employeeId: string) => {
-      if (!session?.user?.token)
+      if (!session?.user?.token) {
         throw new Error("Authentication token missing");
+      }
       return deleteKPI(employeeId, session.user.token);
     },
     onSuccess: (_, employeeId) => {
-      setKPIs((prev) => prev.filter((kpi) => kpi.employeeId !== employeeId));
+      setKPIs((prev) => prev.filter((kpi) => kpi.employee_id !== employeeId));
       queryClient.invalidateQueries({ queryKey: ["kpis"] });
       toast({
         title: "Success",
@@ -66,7 +83,6 @@ export const useKPI = () => {
     },
   });
 
-  // Calculate KPI metrics
   const calculateKPIMetrics = useCallback((kpiData: EmployeeKPI[]) => {
     const totalEmployees = kpiData.length;
     const metrics = kpiData.reduce(
@@ -75,7 +91,7 @@ export const useKPI = () => {
         good: acc.good + (kpi.status === "Good" ? 1 : 0),
         needsImprovement:
           acc.needsImprovement + (kpi.status === "Needs Improvement" ? 1 : 0),
-        totalScore: acc.totalScore + kpi.performanceScore,
+        totalScore: acc.totalScore + (kpi.performance_score || 0),
       }),
       { excellent: 0, good: 0, needsImprovement: 0, totalScore: 0 }
     );

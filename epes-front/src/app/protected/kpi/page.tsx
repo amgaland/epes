@@ -55,8 +55,6 @@ const debounce = <F extends (...args: any[]) => void>(
   };
 };
 
-const MemoizedKPIStats = React.memo(KPIStats);
-
 // Create QueryClient instance client-side
 const KPIPage: React.FC = () => {
   const [queryClient] = useState(() => new QueryClient());
@@ -265,7 +263,10 @@ const KPIPageContent: React.FC = () => {
               )}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
-              <Button onClick={() => router.push("/protected/kpi/create")}>
+              <Button
+                onClick={() => router.push("/protected/kpi/create")}
+                disabled={isLoading}
+              >
                 <CirclePlus className="mr-2 h-4 w-4" />
                 Add KPI
               </Button>
@@ -277,7 +278,11 @@ const KPIPageContent: React.FC = () => {
                 <Download className="mr-2 h-4 w-4" />
                 Export CSV
               </Button>
-              <Button variant="outline" onClick={resetFilters}>
+              <Button
+                variant="outline"
+                onClick={resetFilters}
+                disabled={isLoading}
+              >
                 <RefreshCw className="mr-2 h-4 w-4" />
                 Reset
               </Button>
@@ -342,7 +347,7 @@ const KPIPageContent: React.FC = () => {
             </CardContent>
           </Card>
 
-          <MemoizedKPIStats stats={stats} isLoading={isLoading} />
+          <KPIStats stats={stats} isLoading={isLoading} />
 
           <div className="grid gap-4 md:grid-cols-2 mb-6">
             <Card>
@@ -354,10 +359,8 @@ const KPIPageContent: React.FC = () => {
                   isLoading={isLoading}
                   onCreate={() => router.push("/protected/kpi/create")}
                   onGenerateReport={() => setReportDialogOpen(true)}
-                  onViewExcellent={() =>
-                    router.push("/protected/kpi/excellent")
-                  }
-                  onViewAll={() => router.push("/protected/kpi/all")}
+                  onViewExcellent={() => setFilterStatus("Excellent")}
+                  onViewAll={() => resetFilters()}
                 />
               </CardContent>
             </Card>

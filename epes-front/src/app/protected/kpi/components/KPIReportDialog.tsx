@@ -1,13 +1,14 @@
 // src/app/protected/kpi/components/KPIReportDialog.tsx
-import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -15,8 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Label } from "@/components/ui/label";
-import DOMPurify from "dompurify";
+import { Checkbox } from "@/components/ui/checkbox";
 import { EmployeeKPI, ReportConfig } from "../types";
 
 interface KPIReportDialogProps {
@@ -28,42 +28,22 @@ interface KPIReportDialogProps {
   onGenerate: () => void;
 }
 
-export function KPIReportDialog({
+export const KPIReportDialog: React.FC<KPIReportDialogProps> = ({
   open,
   onOpenChange,
   kpis,
   config,
   setConfig,
   onGenerate,
-}: KPIReportDialogProps) {
-  const [preview, setPreview] = useState<string | null>(null);
-
-  const handlePreview = () => {
-    const filteredKPIs =
-      config.employeeId === "all"
-        ? kpis
-        : kpis.filter((kpi) => kpi.employeeId === config.employeeId);
-    const previewContent = filteredKPIs
-      .map(
-        (kpi) => `
-          <div class="mb-4">
-            <h2 class="text-lg font-bold">${kpi.employeeName}</h2>
-            <p>Performance Score: ${kpi.performanceScore}</p>
-            <p>Status: ${kpi.status}</p>
-            <p>Task Completion: ${kpi.taskCompletionRate}%</p>
-            <p>Project Contribution: ${kpi.projectContribution}%</p>
-          </div>
-        `
-      )
-      .join("");
-    setPreview(previewContent);
-  };
-
+}) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Generate Performance Report</DialogTitle>
+          <DialogDescription>
+            Configure the report settings and generate a PDF report.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
@@ -74,14 +54,14 @@ export function KPIReportDialog({
                 setConfig((prev) => ({ ...prev, employeeId: value }))
               }
             >
-              <SelectTrigger id="employeeId" aria-label="Select employee">
+              <SelectTrigger id="employeeId">
                 <SelectValue placeholder="Select employee" />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All Employees</SelectItem>
                 {kpis.map((kpi) => (
-                  <SelectItem key={kpi.employeeId} value={kpi.employeeId}>
-                    {kpi.employeeName}
+                  <SelectItem key={kpi.employee_id} value={kpi.employee_id}>
+                    {kpi.employee_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -92,10 +72,13 @@ export function KPIReportDialog({
             <Select
               value={config.period}
               onValueChange={(value) =>
-                setConfig((prev) => ({ ...prev, period: value as any }))
+                setConfig((prev) => ({
+                  ...prev,
+                  period: value as ReportConfig["period"],
+                }))
               }
             >
-              <SelectTrigger id="period" aria-label="Select period">
+              <SelectTrigger id="period">
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
               <SelectContent>
@@ -137,19 +120,14 @@ export function KPIReportDialog({
               <Label htmlFor="includeComments">Include Comments</Label>
             </div>
           </div>
-          <div className="flex gap-2">
-            <Button onClick={handlePreview}>Preview Report</Button>
-            <Button onClick={onGenerate}>Generate PDF</Button>
-          </div>
-          {preview && (
-            <div
-              className="border p-4 max-h-[300px] overflow-auto"
-              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview) }}
-              aria-label="Report preview"
-            />
-          )}
         </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button onClick={onGenerate}>Generate</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
-}
+};

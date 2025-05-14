@@ -15,11 +15,11 @@ interface DeleteDialogProps {
   onConfirm: () => void;
 }
 
-export function DeleteDialog({
+export const DeleteDialog: React.FC<DeleteDialogProps> = ({
   open,
   onOpenChange,
   onConfirm,
-}: DeleteDialogProps) {
+}) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
@@ -41,4 +41,4 @@ export function DeleteDialog({
       </DialogContent>
     </Dialog>
   );
-}
+};

@@ -1,15 +1,7 @@
 // src/app/protected/kpi/components/KPIGrid.tsx
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Progress } from "@/components/ui/progress";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { Edit, Trash2 } from "lucide-react";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
+import { Pencil, Trash2 } from "lucide-react";
 import { EmployeeKPI } from "../types";
 
 interface KPIGridProps {
@@ -19,99 +11,62 @@ interface KPIGridProps {
   onDelete: (employeeId: string) => void;
 }
 
-export function KPIGrid({ kpis, onClick, onEdit, onDelete }: KPIGridProps) {
+export const KPIGrid: React.FC<KPIGridProps> = ({
+  kpis,
+  onClick,
+  onEdit,
+  onDelete,
+}) => {
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-      {kpis.length > 0 ? (
-        kpis.map((kpi) => (
-          <TooltipProvider key={kpi.employeeId}>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Card
-                  onClick={() => onClick(kpi.employeeId)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      onClick(kpi.employeeId);
-                    }
-                  }}
-                  className="cursor-pointer hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-primary"
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`View details for ${kpi.employeeName}`}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg">
-                      {kpi.employeeName}
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      <Badge
-                        variant={
-                          kpi.status === "Excellent"
-                            ? "secondary"
-                            : kpi.status === "Good"
-                            ? "default"
-                            : "outline"
-                        }
-                      >
-                        {kpi.status}
-                      </Badge>
-                      <p className="text-sm text-muted-foreground">
-                        Task Completion: {kpi.taskCompletionRate}%
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Tasks: {kpi.tasksCompleted}/{kpi.tasksAssigned}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Project Contribution: {kpi.projectContribution}%
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        Projects: {kpi.projectsAssigned}
-                      </p>
-                      <Progress value={kpi.performanceScore} />
-                      <div className="flex gap-2 mt-2">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onEdit(kpi.employeeId);
-                          }}
-                          aria-label={`Edit KPI for ${kpi.employeeName}`}
-                        >
-                          <Edit className="mr-2 h-4 w-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onDelete(kpi.employeeId);
-                          }}
-                          aria-label={`Delete KPI for ${kpi.employeeName}`}
-                        >
-                          <Trash2 className="mr-2 h-4 w-4" />
-                          Delete
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </TooltipTrigger>
-              <TooltipContent>
-                <p>Employee: {kpi.employeeName}</p>
-                <p>Performance Score: {kpi.performanceScore}</p>
-                <p>Tasks Completed: {kpi.tasksCompleted}</p>
-                <p>Projects Assigned: {kpi.projectsAssigned}</p>
-              </TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        ))
-      ) : (
-        <p className="text-center col-span-full">No employee KPIs found.</p>
-      )}
+      {kpis.map((kpi) => (
+        <Card
+          key={kpi.employee_id}
+          className="cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => onClick(kpi.employee_id)}
+        >
+          <CardContent className="p-4">
+            <h3 className="text-lg font-semibold">{kpi.employee_name}</h3>
+            <p className="text-sm text-muted-foreground">
+              Status: {kpi.status}
+            </p>
+            <p className="text-sm">
+              Tasks: {kpi.tasks_completed}/{kpi.tasks_assigned}
+            </p>
+            <p className="text-sm">Projects: {kpi.projects_assigned}</p>
+            <p className="text-sm">
+              Score:{" "}
+              {typeof kpi.performance_score === "number"
+                ? kpi.performance_score.toFixed(1)
+                : "N/A"}
+            </p>
+          </CardContent>
+          <CardFooter className="flex justify-end gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onEdit(kpi.employee_id);
+              }}
+            >
+              <Pencil className="h-4 w-4 mr-1" />
+              Edit
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                onDelete(kpi.employee_id);
+              }}
+            >
+              <Trash2 className="h-4 w-4 mr-1" />
+              Delete
+            </Button>
+          </CardFooter>
+        </Card>
+      ))}
     </div>
   );
-}
+};

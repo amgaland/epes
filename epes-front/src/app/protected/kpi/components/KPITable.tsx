@@ -1,15 +1,13 @@
 // src/app/protected/kpi/components/KPITable.tsx
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
   TableCell,
   TableHead,
-  TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { ArrowUpDown, Edit, Trash2 } from "lucide-react";
+import { Pencil, Trash2 } from "lucide-react";
 import { EmployeeKPI } from "../types";
 
 interface KPITableProps {
@@ -20,124 +18,95 @@ interface KPITableProps {
   onDelete: (employeeId: string) => void;
 }
 
-export function KPITable({
+export const KPITable: React.FC<KPITableProps> = ({
   kpis,
   onSort,
   onClick,
   onEdit,
   onDelete,
-}: KPITableProps) {
+}) => {
   return (
     <Table>
-      <TableHeader>
+      <TableHead>
         <TableRow>
-          <TableHead
+          <TableCell
+            onClick={() => onSort("employee_name")}
             className="cursor-pointer"
-            onClick={() => onSort("employeeName")}
           >
-            Employee Name <ArrowUpDown className="ml-2 h-4 w-4 inline" />
-          </TableHead>
-          <TableHead
-            className="cursor-pointer"
-            onClick={() => onSort("taskCompletionRate")}
-          >
-            Task Completion (%) <ArrowUpDown className="ml-2 h-4 w-4 inline" />
-          </TableHead>
-          <TableHead
-            className="cursor-pointer"
-            onClick={() => onSort("tasksCompleted")}
-          >
-            Tasks Completed <ArrowUpDown className="ml-2 h-4 w-4 inline" />
-          </TableHead>
-          <TableHead
-            className="cursor-pointer"
-            onClick={() => onSort("projectContribution")}
-          >
-            Project Contribution (%){" "}
-            <ArrowUpDown className="ml-2 h-4 w-4 inline" />
-          </TableHead>
-          <TableHead
-            className="cursor-pointer"
-            onClick={() => onSort("projectsAssigned")}
-          >
-            Projects Assigned <ArrowUpDown className="ml-2 h-4 w-4 inline" />
-          </TableHead>
-          <TableHead
-            className="cursor-pointer"
-            onClick={() => onSort("performanceScore")}
-          >
-            Performance Score <ArrowUpDown className="ml-2 h-4 w-4 inline" />
-          </TableHead>
-          <TableHead
-            className="cursor-pointer"
+            Employee
+          </TableCell>
+          <TableCell
             onClick={() => onSort("status")}
+            className="cursor-pointer"
           >
-            Status <ArrowUpDown className="ml-2 h-4 w-4 inline" />
-          </TableHead>
-          <TableHead>Actions</TableHead>
+            Status
+          </TableCell>
+          <TableCell
+            onClick={() => onSort("tasks_completed")}
+            className="cursor-pointer"
+          >
+            Tasks Completed
+          </TableCell>
+          <TableCell
+            onClick={() => onSort("projects_assigned")}
+            className="cursor-pointer"
+          >
+            Projects Assigned
+          </TableCell>
+          <TableCell
+            onClick={() => onSort("performance_score")}
+            className="cursor-pointer"
+          >
+            Performance Score
+          </TableCell>
+          <TableCell>Actions</TableCell>
         </TableRow>
-      </TableHeader>
+      </TableHead>
       <TableBody>
-        {kpis.length > 0 ? (
-          kpis.map((kpi) => (
-            <TableRow
-              key={kpi.employeeId}
-              onClick={() => onClick(kpi.employeeId)}
-              className="cursor-pointer hover:bg-muted"
-            >
-              <TableCell className="font-medium">{kpi.employeeName}</TableCell>
-              <TableCell>{kpi.taskCompletionRate}%</TableCell>
-              <TableCell>{kpi.tasksCompleted}</TableCell>
-              <TableCell>{kpi.projectContribution}%</TableCell>
-              <TableCell>{kpi.projectsAssigned}</TableCell>
-              <TableCell>{kpi.performanceScore}</TableCell>
-              <TableCell>
-                <Badge
-                  variant={
-                    kpi.status === "Excellent"
-                      ? "secondary"
-                      : kpi.status === "Good"
-                        ? "default"
-                        : "outline"
-                  }
-                >
-                  {kpi.status}
-                </Badge>
-              </TableCell>
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEdit(kpi.employeeId);
-                    }}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDelete(kpi.employeeId);
-                    }}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))
-        ) : (
-          <TableRow>
-            <TableCell colSpan={8} className="text-center">
-              No employee KPIs found.
+        {kpis.map((kpi) => (
+          <TableRow
+            key={kpi.employee_id}
+            onClick={() => onClick(kpi.employee_id)}
+          >
+            <TableCell>{kpi.employee_name}</TableCell>
+            <TableCell>{kpi.status}</TableCell>
+            <TableCell>
+              {kpi.tasks_completed}/{kpi.tasks_assigned}
+            </TableCell>
+            <TableCell>{kpi.projects_assigned}</TableCell>
+            <TableCell>
+              {typeof kpi.performance_score === "number"
+                ? kpi.performance_score.toFixed(1)
+                : "N/A"}
+            </TableCell>
+            <TableCell>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEdit(kpi.employee_id);
+                }}
+                className="mr-2"
+              >
+                <Pencil className="h-4 w-4 mr-1" />
+                Edit
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onDelete(kpi.employee_id);
+                }}
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Delete
+              </Button>
             </TableCell>
           </TableRow>
-        )}
+        ))}
       </TableBody>
     </Table>
   );
-}
+};

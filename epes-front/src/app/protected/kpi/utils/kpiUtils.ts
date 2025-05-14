@@ -1,277 +1,132 @@
 // src/app/protected/kpi/utils/kpiUtils.ts
-import jsPDF from "jspdf";
 import { EmployeeKPI, ReportConfig } from "../types";
+import jsPDF from "jspdf";
 
-export function sortKPIs(
+export const sortKPIs = (
   kpis: EmployeeKPI[],
   sortField: keyof EmployeeKPI | null,
   sortDirection: "asc" | "desc"
-): EmployeeKPI[] {
+): EmployeeKPI[] => {
   if (!sortField) return kpis;
   return [...kpis].sort((a, b) => {
-    const aValue = a[sortField];
-    const bValue = b[sortField];
-
-    if (sortField === "employeeName") {
+    const valueA = a[sortField];
+    const valueB = b[sortField];
+    if (typeof valueA === "string" && typeof valueB === "string") {
       return sortDirection === "asc"
-        ? typeof aValue === "string" && typeof bValue === "string"
-          ? aValue.localeCompare(bValue)
-          : 0
-        : typeof aValue === "string" && typeof bValue === "string"
-          ? bValue.localeCompare(aValue)
-          : 0;
+        ? valueA.localeCompare(valueB)
+        : valueB.localeCompare(valueA);
     }
-
-    if (typeof aValue === "number" && typeof bValue === "number") {
-      return sortDirection === "asc" ? aValue - bValue : bValue - aValue;
+    if (typeof valueA === "number" && typeof valueB === "number") {
+      return sortDirection === "asc" ? valueA - valueB : valueB - valueA;
     }
-
-    if (typeof aValue === "string" && typeof bValue === "string") {
-      return sortDirection === "asc"
-        ? aValue.localeCompare(bValue)
-        : bValue.localeCompare(aValue);
-    }
-
     return 0;
   });
-}
+};
 
-export function filterKPIs(
+export const filterKPIs = (
   kpis: EmployeeKPI[],
-  searchTerm: string,
-  filterStatus: "All" | "Excellent" | "Good" | "Needs Improvement"
-): EmployeeKPI[] {
-  return kpis.filter(
-    (kpi) =>
-      kpi.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) &&
-      (filterStatus === "All" || kpi.status === filterStatus)
-  );
-}
+  search: string,
+  status: "All" | "Excellent" | "Good" | "Needs Improvement"
+): EmployeeKPI[] => {
+  let filtered = kpis;
+  if (search) {
+    filtered = filtered.filter((kpi) => {
+      const name = kpi.employee_name ?? "";
+      const kpiStatus = kpi.status ?? "";
+      return (
+        name.toLowerCase().includes(search.toLowerCase()) ||
+        kpiStatus.toLowerCase().includes(search.toLowerCase())
+      );
+    });
+  }
+  if (status !== "All") {
+    filtered = filtered.filter((kpi) => kpi.status === status);
+  }
+  return filtered;
+};
 
-export function exportToCSV(kpis: EmployeeKPI[]): void {
+export const exportToCSV = (kpis: EmployeeKPI[]): void => {
   const headers = [
-    "Employee ID,Employee Name,Task Completion Rate (%),Tasks Completed,Tasks Assigned,Project Contribution (%),Projects Assigned,Performance Score,Status",
+    "Employee",
+    "Status",
+    "Tasks Completed",
+    "Tasks Assigned",
+    "Projects Assigned",
+    "Performance Score",
   ];
-  const rows = kpis.map(
-    (k) =>
-      `${k.employeeId},${k.employeeName},${k.taskCompletionRate},${k.tasksCompleted},${k.tasksAssigned},${k.projectContribution},${k.projectsAssigned},${k.performanceScore},${k.status}`
+  const rows = kpis.map((kpi) =>
+    [
+      kpi.employee_name,
+      kpi.status,
+      kpi.tasks_completed.toString(),
+      kpi.tasks_assigned.toString(),
+      kpi.projects_assigned.toString(),
+      kpi.performance_score.toFixed(1),
+    ]
+      .map((value) => `"${value.replace(/"/g, '""')}"`)
+      .join(",")
   );
-  const csvContent = [headers, ...rows].join("\n");
-  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-  const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
-  link.setAttribute("download", "employee_kpis.csv");
-  document.body.appendChild(link);
-  link.click();
-  document.body.removeChild(link);
-}
+  const csv = [headers.join(","), ...rows].join("\n");
+  const blob = new Blob([csv], { type: "text/csv" });
+  const url = window.URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "kpis.csv";
+  a.click();
+  window.URL.revokeObjectURL(url);
+};
 
-export function generatePerformanceReport(
+export const generatePerformanceReport = (
   kpis: EmployeeKPI[],
   config: ReportConfig
-): void {
-  const { employeeId, period, includeTasks, includeProjects, includeComments } =
-    config;
-  let filteredKPIs = kpis;
-  if (employeeId !== "all") {
-    filteredKPIs = kpis.filter((kpi) => kpi.employeeId === employeeId);
-  }
+): void => {
+  const pdf = new jsPDF();
+  pdf.setFontSize(16);
+  pdf.text("Employee Performance Report", 20, 20);
 
-  const periodFilter = (date: string) => {
-    if (date === "N/A") return true;
-    const taskDate = new Date(date);
-    const now = new Date();
-    if (period === "last30days") {
-      return taskDate >= new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    } else if (period === "last90days") {
-      return taskDate >= new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-    }
-    return true;
-  };
-
-  const doc = new jsPDF();
-  const pageWidth = doc.internal.pageSize.getWidth();
-  const margin = 15;
-  let yOffset = margin;
-
-  doc.setFillColor(0, 102, 204);
-  doc.rect(0, 0, pageWidth, 30, "F");
-  doc.setFont("helvetica", "bold");
-  doc.setFontSize(18);
-  doc.setTextColor(255, 255, 255);
-  doc.text("Performance Evaluation Report", pageWidth / 2, 20, {
-    align: "center",
-  });
-
-  doc.setTextColor(0, 0, 0);
-  doc.setFont("helvetica", "normal");
-  doc.setFontSize(10);
-  yOffset += 25;
-
-  doc.setFont("helvetica", "italic");
-  doc.text(
-    `Generated on: ${new Date().toISOString().split("T")[0]}`,
-    margin,
-    yOffset
-  );
-  yOffset += 5;
-  doc.text(
-    `Period: ${
-      period === "allTime"
-        ? "All Time"
-        : period === "last30days"
-          ? "Last 30 Days"
-          : "Last 90 Days"
-    }`,
-    margin,
-    yOffset
-  );
-  yOffset += 10;
+  let y = 30;
+  const filteredKPIs =
+    config.employeeId === "all"
+      ? kpis
+      : kpis.filter((kpi) => kpi.employee_id === config.employeeId);
 
   filteredKPIs.forEach((kpi, index) => {
-    if (yOffset > 260) {
-      doc.addPage();
-      yOffset = margin;
-    }
+    pdf.setFontSize(12);
+    pdf.text(`Employee: ${kpi.employee_name}`, 20, y);
+    y += 10;
+    pdf.text(`Status: ${kpi.status}`, 20, y);
+    y += 10;
+    pdf.text(`Performance Score: ${kpi.performance_score.toFixed(1)}`, 20, y);
+    y += 10;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.text(kpi.employeeName, margin, yOffset);
-    yOffset += 5;
-    doc.setLineWidth(0.5);
-    doc.line(margin, yOffset, pageWidth - margin, yOffset);
-    yOffset += 10;
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    const metrics = [
-      { label: "Performance Score", value: `${kpi.performanceScore}` },
-      { label: "Status", value: kpi.status },
-      { label: "Task Completion Rate", value: `${kpi.taskCompletionRate}%` },
-      {
-        label: "Tasks Completed",
-        value: `${kpi.tasksCompleted}/${kpi.tasksAssigned}`,
-      },
-      { label: "Project Contribution", value: `${kpi.projectContribution}%` },
-      { label: "Projects Assigned", value: `${kpi.projectsAssigned}` },
-    ];
-
-    doc.setFillColor(230, 230, 230);
-    doc.rect(margin, yOffset, 80, 8, "F");
-    doc.rect(margin + 80, yOffset, 80, 8, "F");
-    doc.setFont("helvetica", "bold");
-    doc.text("Metric", margin + 2, yOffset + 6);
-    doc.text("Value", margin + 82, yOffset + 6);
-    yOffset += 8;
-
-    doc.setFont("helvetica", "normal");
-    metrics.forEach((metric, idx) => {
-      doc.setFillColor(idx % 2 === 0 ? 240 : 255, 255, 255);
-      doc.rect(margin, yOffset, 80, 8, "F");
-      doc.rect(margin + 80, yOffset, 80, 8, "F");
-      doc.text(metric.label, margin + 2, yOffset + 6);
-      doc.text(metric.value, margin + 82, yOffset + 6);
-      yOffset += 8;
-    });
-    yOffset += 10;
-
-    if (includeTasks && kpi.tasks) {
-      doc.setFont("helvetica", "bold");
-      doc.text("Tasks", margin, yOffset);
-      yOffset += 5;
-      doc.setLineWidth(0.2);
-      doc.line(margin, yOffset, pageWidth - margin, yOffset);
-      yOffset += 5;
-      doc.setFont("helvetica", "normal");
-      const filteredTasks = kpi.tasks.filter((task) =>
-        periodFilter(task.dueDate)
-      );
-      filteredTasks.forEach((task) => {
-        if (yOffset > 260) {
-          doc.addPage();
-          yOffset = margin;
-        }
-        const taskText = `${task.title} (Status: ${task.status}, Due: ${task.dueDate})`;
-        const splitText = doc.splitTextToSize(
-          taskText,
-          pageWidth - 2 * margin - 5
-        );
-        doc.text(splitText, margin + 5, yOffset);
-        yOffset += splitText.length * 6 + 2;
+    if (config.includeTasks && kpi.tasks) {
+      pdf.text("Tasks:", 20, y);
+      y += 10;
+      kpi.tasks.forEach((task) => {
+        pdf.text(`- ${task.title} (${task.status})`, 30, y);
+        y += 7;
       });
-      yOffset += 5;
     }
 
-    if (includeProjects && kpi.projects) {
-      doc.setFont("helvetica", "bold");
-      doc.text("Projects", margin, yOffset);
-      yOffset += 5;
-      doc.setLineWidth(0.2);
-      doc.line(margin, yOffset, pageWidth - margin, yOffset);
-      yOffset += 5;
-      doc.setFont("helvetica", "normal");
+    if (config.includeProjects && kpi.projects) {
+      pdf.text("Projects:", 20, y);
+      y += 10;
       kpi.projects.forEach((project) => {
-        if (yOffset > 260) {
-          doc.addPage();
-          yOffset = margin;
-        }
-        const projectText = `${project.name} (Progress: ${project.progress}%)`;
-        const splitText = doc.splitTextToSize(
-          projectText,
-          pageWidth - 2 * margin - 5
-        );
-        doc.text(splitText, margin + 5, yOffset);
-        yOffset += splitText.length * 6 + 2;
+        pdf.text(`- ${project.name} (${project.status})`, 30, y);
+        y += 7;
       });
-      yOffset += 5;
     }
 
-    if (includeComments) {
-      doc.setFont("helvetica", "bold");
-      doc.text("Comments", margin, yOffset);
-      yOffset += 5;
-      doc.setLineWidth(0.2);
-      doc.line(margin, yOffset, pageWidth - margin, yOffset);
-      yOffset += 5;
-      doc.setFont("helvetica", "normal");
-      const comment =
-        kpi.status === "Excellent"
-          ? "Outstanding performance with consistent task completion and significant project contributions."
-          : kpi.status === "Good"
-            ? "Solid performance, meeting expectations in tasks and projects."
-            : "Improvement needed in task completion and/or project contributions.";
-      const splitComment = doc.splitTextToSize(
-        comment,
-        pageWidth - 2 * margin - 5
-      );
-      doc.text(splitComment, margin + 5, yOffset);
-      yOffset += splitComment.length * 6 + 5;
+    if (config.includeComments) {
+      pdf.text("Comments: None", 20, y); // Placeholder
+      y += 10;
     }
 
     if (index < filteredKPIs.length - 1) {
-      yOffset += 10;
+      pdf.addPage();
+      y = 20;
     }
   });
 
-  const pageCount = doc.getNumberOfPages();
-  for (let i = 1; i <= pageCount; i++) {
-    doc.setPage(i);
-    doc.setFontSize(8);
-    doc.setTextColor(100, 100, 100);
-    doc.text(
-      `Page ${i} of ${pageCount}`,
-      pageWidth - margin,
-      doc.internal.pageSize.getHeight() - 10,
-      { align: "right" }
-    );
-  }
-
-  doc.save(
-    `performance_report_${
-      employeeId === "all"
-        ? "all_employees"
-        : kpis.find((k) => k.employeeId === employeeId)?.employeeName ||
-          "employee"
-    }_${period}.pdf`
-  );
-}
+  pdf.save("performance_report.pdf");
+};

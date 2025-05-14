@@ -1,7 +1,6 @@
 // src/app/protected/kpi/components/KPIActions.tsx
 import { Button } from "@/components/ui/button";
-import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
-import { FileText } from "lucide-react";
+import { CirclePlus, FileText, Star, List } from "lucide-react";
 
 interface KPIActionsProps {
   isLoading: boolean;
@@ -11,37 +10,31 @@ interface KPIActionsProps {
   onViewAll: () => void;
 }
 
-export function KPIActions({
+export const KPIActions: React.FC<KPIActionsProps> = ({
   isLoading,
   onCreate,
   onGenerateReport,
   onViewExcellent,
   onViewAll,
-}: KPIActionsProps) {
+}) => {
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>KPI Actions</CardTitle>
-      </CardHeader>
-      <CardContent className="flex flex-wrap gap-4">
-        <Button onClick={onCreate} disabled={isLoading}>
-          Create KPI
-        </Button>
-        <Button onClick={onGenerateReport} disabled={isLoading}>
-          <FileText className="mr-2 h-4 w-4" />
-          Generate Performance Report
-        </Button>
-        <Button
-          onClick={onViewExcellent}
-          disabled={isLoading}
-          variant="outline"
-        >
-          View Excellent Performers
-        </Button>
-        <Button onClick={onViewAll} disabled={isLoading} variant="secondary">
-          View All KPIs
-        </Button>
-      </CardContent>
-    </Card>
+    <div className="flex flex-col gap-2">
+      <Button onClick={onCreate} disabled={isLoading}>
+        <CirclePlus className="mr-2 h-4 w-4" />
+        Create KPI
+      </Button>
+      <Button onClick={onGenerateReport} disabled={isLoading}>
+        <FileText className="mr-2 h-4 w-4" />
+        Generate Report
+      </Button>
+      <Button onClick={onViewExcellent} disabled={isLoading}>
+        <Star className="mr-2 h-4 w-4" />
+        View Excellent Performers
+      </Button>
+      <Button onClick={onViewAll} disabled={isLoading}>
+        <List className="mr-2 h-4 w-4" />
+        View All KPIs
+      </Button>
+    </div>
   );
-}
+};
