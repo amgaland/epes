@@ -1,4 +1,3 @@
-// src/app/protected/task/types.ts
 export interface User {
   id: string;
   first_name: string;
@@ -19,6 +18,8 @@ export interface Task {
   assignedTo: User | null;
   priority: "Low" | "Medium" | "High";
   project: Project | null;
+  comment: string | null;
+  updated_by: string | null; // UUID, not first_name
 }
 
 export interface TaskResponse {
@@ -34,6 +35,8 @@ export interface TaskResponse {
   } | null;
   priority: "Low" | "Medium" | "High";
   project_id: string | null;
+  comment: string | null;
+  updated_by: string | null; // UUID, not first_name
 }
 
 export interface TaskForm {
