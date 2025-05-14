@@ -104,9 +104,9 @@ func RegisterRoutes(router *gin.Engine) {
         {
             kpiRoutes.GET("/kpi", protected.GetAllKPIs)
 	        kpiRoutes.GET("/kpi/:id", protected.GetKPI)
-	        kpiRoutes.POST("/kpi", protected.CreateKPI)
-	        kpiRoutes.PUT("/kpi/:id", protected.UpdateKPI)
-	        kpiRoutes.DELETE("/kpi/:id", protected.DeleteKPI)
+	        // kpiRoutes.POST("/kpi", protected.CreateKPI)
+	        // kpiRoutes.PUT("/kpi/:id", protected.UpdateKPI)
+	        // kpiRoutes.DELETE("/kpi/:id", protected.DeleteKPI)
 
         }
     }
