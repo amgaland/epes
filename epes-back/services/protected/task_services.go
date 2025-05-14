@@ -111,79 +111,92 @@ func GetTaskByID(id string, c *gin.Context) (*models.Task, error) {
 
 // UpdateTask updates an existing task
 func UpdateTask(id string, task models.Task) (models.Task, error) {
-	tx := config.DB.Begin()
-	if tx.Error != nil {
-		return models.Task{}, tx.Error
-	}
+    tx := config.DB.Begin()
+    if tx.Error != nil {
+        return models.Task{}, tx.Error
+    }
 
-	// Check if task exists
-	var existingTask models.Task
-	if err := tx.First(&existingTask, "id = ?", id).Error; err != nil {
-		tx.Rollback()
-		if errors.Is(err, gorm.ErrRecordNotFound) {
-			return models.Task{}, errors.New("task not found")
-		}
-		return models.Task{}, err
-	}
+    // Check if task exists
+    var existingTask models.Task
+    if err := tx.First(&existingTask, "id = ?", id).Error; err != nil {
+        tx.Rollback()
+        if errors.Is(err, gorm.ErrRecordNotFound) {
+            return models.Task{}, errors.New("task not found")
+        }
+        return models.Task{}, err
+    }
 
-	// Validate fields
-	if task.ProjectID != "" {
-		var project models.Project
-		if err := tx.First(&project, "id = ?", task.ProjectID).Error; err != nil {
-			tx.Rollback()
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return models.Task{}, errors.New("invalid project_id: project not found")
-			}
-			return models.Task{}, err
-		}
-	}
-	if task.AssignedToID != "" {
-		var user models.User
-		if err := tx.First(&user, "id = ?", *&task.AssignedToID).Error; err != nil {
-			tx.Rollback()
-			if errors.Is(err, gorm.ErrRecordNotFound) {
-				return models.Task{}, errors.New("invalid assigned_to_id: user not found")
-			}
-			return models.Task{}, err
-		}
-	}
-	if task.Status != "" && task.Status != "Pending" && task.Status != "In Progress" && task.Status != "Completed" {
-		tx.Rollback()
-		return models.Task{}, errors.New("status must be Pending, In Progress, or Completed")
-	}
+    // Validate fields
+    if task.ProjectID != "" {
+        var project models.Project
+        if err := tx.First(&project, "id = ?", task.ProjectID).Error; err != nil {
+            tx.Rollback()
+            if errors.Is(err, gorm.ErrRecordNotFound) {
+                return models.Task{}, errors.New("invalid project_id: project not found")
+            }
+            return models.Task{}, err
+        }
+    }
+    if task.AssignedToID != "" {
+        var user models.User
+        if err := tx.First(&user, "id = ?", task.AssignedToID).Error; err != nil {
+            tx.Rollback()
+            if errors.Is(err, gorm.ErrRecordNotFound) {
+                return models.Task{}, errors.New("invalid assigned_to_id: user not found")
+            }
+            return models.Task{}, err
+        }
+    }
+    if task.Status != "" && task.Status != "Pending" && task.Status != "In Progress" && task.Status != "Completed" {
+        tx.Rollback()
+        return models.Task{}, errors.New("status must be Pending, In Progress, or Completed")
+    }
+    if task.Model.UpdatedBy != nil {
+        var user models.User
+        if err := tx.First(&user, "id = ?", *task.Model.UpdatedBy).Error; err != nil {
+            tx.Rollback()
+            if errors.Is(err, gorm.ErrRecordNotFound) {
+                return models.Task{}, errors.New("invalid updated_by: user not found")
+            }
+            return models.Task{}, err
+        }
+    }
 
-	// Update fields
-	updateData := models.Task{
-		ProjectID:    task.ProjectID,
-		Title:        task.Title,
-		Description:  task.Description,
-		AssignedToID: task.AssignedToID,
-		Status:       task.Status,
-		Deadline:     task.Deadline,
-		CompletedAt:  task.CompletedAt,
-	}
-	if err := tx.Model(&existingTask).Updates(updateData).Error; err != nil {
-		tx.Rollback()
-		return models.Task{}, err
-	}
+    // Update fields
+    updateData := models.Task{
+        ProjectID:    task.ProjectID,
+        Title:        task.Title,
+        Description:  task.Description,
+        AssignedToID: task.AssignedToID,
+        Status:       task.Status,
+        Deadline:     task.Deadline,
+        CompletedAt:  task.CompletedAt,
+        Comment:      task.Comment,
+        Model: models.Model{
+            UpdatedBy: task.Model.UpdatedBy,
+        },
+    }
+    if err := tx.Model(&existingTask).Updates(updateData).Error; err != nil {
+        tx.Rollback()
+        return models.Task{}, err
+    }
 
-	// Fetch updated task
-	var updatedTask models.Task
-	if err := tx.
-		Preload("Project").
-		Preload("AssignedTo").
-		First(&updatedTask, "id = ?", id).Error; err != nil {
-		tx.Rollback()
-		return models.Task{}, err
-	}
+    // Fetch updated task
+    var updatedTask models.Task
+    if err := tx.
+        Preload("Project").
+        Preload("AssignedTo").
+        First(&updatedTask, "id = ?", id).Error; err != nil {
+        tx.Rollback()
+        return models.Task{}, err
+    }
 
-	if err := tx.Commit().Error; err != nil {
-		return models.Task{}, err
-	}
+    if err := tx.Commit().Error; err != nil {
+        return models.Task{}, err
+    }
 
-	return updatedTask, nil
+    return updatedTask, nil
 }
-
 // DeleteTask deletes a task
 func DeleteTask(id string) error {
 	tx := config.DB.Begin()
