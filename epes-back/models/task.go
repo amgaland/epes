@@ -13,7 +13,6 @@ type Task struct {
 	Status         string     `json:"status"`         // e.g., "Pending", "In Progress", "Completed"
 	Deadline       *time.Time `json:"deadline"`
 	CompletedAt    *time.Time `json:"completed_at"`
-	Comment 	  string     `json:"comment"`
 }
 
 type TaskFeedback struct {

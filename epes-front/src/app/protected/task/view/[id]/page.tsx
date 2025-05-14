@@ -1,3 +1,4 @@
+// src/app/protected/task/view/[id]/page.tsx
 "use client";
 import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
@@ -17,7 +18,6 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/hooks/use-toast";
 import { Task, TaskResponse } from "../../types";
-import axios from "axios";
 
 export default function TaskViewPage() {
   const { data: session, status } = useSession();
@@ -28,9 +28,6 @@ export default function TaskViewPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [task, setTask] = useState<Task | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [comment, setComment] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [updaterName, setUpdaterName] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchTask = async () => {
@@ -52,7 +49,6 @@ export default function TaskViewPage() {
 
       try {
         setIsLoading(true);
-
         const taskResponse: TaskResponse = await req.GET(
           `/protected/tasks?id=${taskId}`,
           session.user.token
@@ -85,21 +81,6 @@ export default function TaskViewPage() {
           }
         }
 
-        // Fetch updater name
-        let updaterName = "No updater specified";
-        if (taskResponse.updated_by) {
-          try {
-            const userResponse = await req.GET(
-              `/admin/users?id=${taskResponse.updated_by}`,
-              session.user.token
-            );
-            updaterName =
-              `${userResponse.first_name || "Unknown"} ${userResponse.last_name || ""}`.trim();
-          } catch (userError: any) {
-            console.error("Failed to fetch updater name:", userError);
-          }
-        }
-
         const mappedTask: Task = {
           id: taskResponse.id,
           title: taskResponse.title,
@@ -115,12 +96,9 @@ export default function TaskViewPage() {
             : null,
           priority: taskResponse.priority || "Low",
           project,
-          comment: taskResponse.comment || null,
-          updated_by: taskResponse.updated_by || null,
         };
 
         setTask(mappedTask);
-        setUpdaterName(updaterName);
       } catch (error: any) {
         setError(`Failed to load task: ${error.message}`);
       } finally {
@@ -150,184 +128,6 @@ export default function TaskViewPage() {
       default:
         return 0;
     }
-  };
-
-  const handleCommentChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setComment(e.target.value);
-  };
-
-  const addComment = async () => {
-    if (!session?.user?.token) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Authentication token missing. Please log in again.",
-      });
-      router.push("/login");
-      return;
-    }
-
-    if (!session?.user?.id) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "User ID missing. Please log in again.",
-      });
-      router.push("/login");
-      return;
-    }
-
-    if (!taskId) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Task ID is missing.",
-      });
-      return;
-    }
-
-    if (!comment.trim()) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: "Comment cannot be empty",
-      });
-      return;
-    }
-
-    try {
-      setIsSubmitting(true);
-
-      // Minimal payload as per Postman
-      const updatePayload = {
-        comment: comment,
-        updated_by: session.user.id,
-      };
-
-      // Log request details
-      console.log("Sending PUT request:", {
-        url: `http://localhost:8088/protected/tasks/${taskId}`,
-        payload: updatePayload,
-        token: session.user.token,
-      });
-
-      // Use Axios directly
-      const response = await axios.put(
-        `http://localhost:8088/protected/tasks/${taskId}`,
-        updatePayload,
-        {
-          headers: {
-            Authorization: `Bearer ${session.user.token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
-
-      // Log response
-      console.log("PUT response:", response.status, response.data);
-
-      // Check if comment was updated
-      if (response.status === 200 && response.data.comment === comment) {
-        toast({
-          title: "Success",
-          description: "Comment added successfully",
-        });
-
-        // Clear the comment field
-        setComment("");
-
-        // Refresh the task data
-        const updatedTaskResponse: TaskResponse = await req.GET(
-          `/protected/tasks?id=${taskId}`,
-          session.user.token
-        );
-
-        // Log GET response
-        console.log("GET response:", updatedTaskResponse);
-
-        // Only update if we received valid data
-        if (updatedTaskResponse && updatedTaskResponse.id) {
-          // Map the API response to our Task interface
-          let project = null;
-          if (updatedTaskResponse.project_id) {
-            try {
-              const projectResponse = await req.GET(
-                `/protected/projects?id=${updatedTaskResponse.project_id}`,
-                session.user.token
-              );
-              project = {
-                id: updatedTaskResponse.project_id,
-                name: projectResponse.name || "Unnamed Project",
-              };
-            } catch (projectError: any) {
-              project = {
-                id: updatedTaskResponse.project_id,
-                name: "Unnamed Project",
-              };
-            }
-          }
-
-          let formattedDueDate = "N/A";
-          if (updatedTaskResponse.deadline) {
-            const parsedDate = new Date(updatedTaskResponse.deadline);
-            if (!isNaN(parsedDate.getTime())) {
-              formattedDueDate = parsedDate.toISOString().split("T")[0];
-            }
-          }
-
-          const refreshedTask: Task = {
-            id: updatedTaskResponse.id,
-            title: updatedTaskResponse.title,
-            description: updatedTaskResponse.description || null,
-            status: updatedTaskResponse.status,
-            dueDate: formattedDueDate,
-            assignedTo: updatedTaskResponse.assigned_to
-              ? {
-                  id: updatedTaskResponse.assigned_to.id,
-                  first_name:
-                    updatedTaskResponse.assigned_to.first_name || "Unassigned",
-                  last_name: updatedTaskResponse.assigned_to.last_name || "",
-                }
-              : null,
-            priority: updatedTaskResponse.priority || "Low",
-            project,
-            comment: updatedTaskResponse.comment || null,
-            updated_by: updatedTaskResponse.updated_by || null,
-          };
-
-          setTask(refreshedTask);
-          // updaterName is already set by fetchTask
-        } else {
-          console.error("Invalid GET response:", updatedTaskResponse);
-          toast({
-            variant: "destructive",
-            title: "Error",
-            description: "Failed to refresh task data.",
-          });
-        }
-      } else {
-        console.error("Comment not updated in response:", response.data);
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Failed to update comment.",
-        });
-      }
-    } catch (error: any) {
-      console.error("PUT error:", error, error.response?.data);
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: `Failed to add comment: ${error.message}`,
-      });
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
-  const handleCommentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    addComment();
   };
 
   if (status === "loading") {
@@ -524,38 +324,6 @@ export default function TaskViewPage() {
                       )}
                     </p>
                   </div>
-
-                  <form onSubmit={handleCommentSubmit}>
-                    <div>
-                      <p className="text-sm text-muted-foreground flex items-center">
-                        <Clock className="mr-2 h-4 w-4" /> Comment
-                      </p>
-                      <input
-                        className="border rounded-md p-2 w-full"
-                        type="text"
-                        value={comment}
-                        onChange={handleCommentChange}
-                        placeholder="Enter your comment"
-                      />
-                    </div>
-                    <div className="flex justify-end">
-                      <Button
-                        type="submit"
-                        variant="default"
-                        className="mt-4"
-                        disabled={isSubmitting}
-                      >
-                        {isSubmitting ? "Adding..." : "Add Comment"}
-                      </Button>
-                    </div>
-                    <div className="mt-4">
-                      <p className="text-sm text-muted-foreground">
-                        Current Comment
-                      </p>
-                      <p>{task.comment || "No comment yet"}</p>
-                      <p>{updaterName}</p>
-                    </div>
-                  </form>
 
                   {task.description && (
                     <div>
