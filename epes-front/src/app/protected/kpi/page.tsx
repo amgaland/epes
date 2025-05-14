@@ -349,7 +349,7 @@ const KPIPageContent: React.FC = () => {
 
           <KPIStats stats={stats} isLoading={isLoading} />
 
-          <div className="grid gap-4 md:grid-cols-2 mb-6">
+          <div className="grid gap-4 md:grid-cols-2 mb-6 mt-4">
             <Card>
               <CardHeader>
                 <CardTitle>Actions</CardTitle>
