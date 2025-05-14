@@ -1,9 +1,11 @@
+// src/app/protected/kpi/page.tsx
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import React, { useState, useMemo, useCallback, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -20,8 +22,10 @@ import {
   Table as TableIcon,
   Users,
   RefreshCw,
+  Search,
+  X,
 } from "lucide-react";
-import { Search } from "lucide-react";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { KPIStats } from "./components/KPIStats";
 import { KPIActions } from "./components/KPIActions";
 import { KPITable } from "./components/KPITable";
@@ -29,7 +33,7 @@ import { KPIGrid } from "./components/KPIGrid";
 import { KPIList } from "./components/KPIList";
 import { KPIReportDialog } from "./components/KPIReportDialog";
 import { DeleteDialog } from "./components/DeleteDialog";
-import { fetchEmployeeKPIs, deleteKPI } from "./services/kpiService";
+import { useKPI } from "./hooks/useKPI";
 import {
   sortKPIs,
   filterKPIs,
@@ -37,8 +41,9 @@ import {
   generatePerformanceReport,
 } from "./utils/kpiUtils";
 import { EmployeeKPI, KPIStat, ReportConfig } from "./types";
+import { motion, AnimatePresence } from "framer-motion";
 
-// Custom debounce function to avoid lodash dependency
+// Custom debounce function
 const debounce = <F extends (...args: any[]) => void>(
   func: F,
   wait: number
@@ -50,16 +55,29 @@ const debounce = <F extends (...args: any[]) => void>(
   };
 };
 
+const MemoizedKPIStats = React.memo(KPIStats);
+
+// Create QueryClient instance client-side
 const KPIPage: React.FC = () => {
+  const [queryClient] = useState(() => new QueryClient());
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <KPIPageContent />
+    </QueryClientProvider>
+  );
+};
+
+// Main page content
+const KPIPageContent: React.FC = () => {
   const { data: session, status } = useSession();
   const router = useRouter();
   const { toast } = useToast();
-  const [isLoading, setIsLoading] = useState(true);
+  const { kpis, stats, isLoading, deleteKPI } = useKPI();
+
   const [viewMode, setViewMode] = useState<"table" | "grid" | "list">("table");
   const [searchTerm, setSearchTerm] = useState("");
   const [searchInput, setSearchInput] = useState("");
-  const [kpis, setKPIs] = useState<EmployeeKPI[]>([]);
-  const [stats, setStats] = useState<KPIStat[]>([]);
   const [sortField, setSortField] = useState<keyof EmployeeKPI | null>(null);
   const [sortDirection, setSortDirection] = useState<"asc" | "desc">("asc");
   const [filterStatus, setFilterStatus] = useState<
@@ -76,57 +94,32 @@ const KPIPage: React.FC = () => {
     includeComments: false,
   });
 
-  // Centralized KPI metrics calculation
-  const calculateKPIMetrics = useCallback((kpiData: EmployeeKPI[]) => {
-    const excellentPerformers = kpiData.filter(
-      (k) => k.status === "Excellent"
-    ).length;
-    const goodPerformers = kpiData.filter((k) => k.status === "Good").length;
-    const needsImprovement = kpiData.filter(
-      (k) => k.status === "Needs Improvement"
-    ).length;
-    const avgPerformanceScore =
-      kpiData.length > 0
-        ? Math.round(
-            kpiData.reduce((sum, k) => sum + k.performanceScore, 0) /
-              kpiData.length
-          )
-        : 0;
-    const totalEmployees = kpiData.length;
-
-    return {
-      stats: [
-        {
-          title: "Excellent Performers",
-          value: excellentPerformers,
-          icon: CheckCircle,
-        },
-        { title: "Good Performers", value: goodPerformers, icon: Users },
-        { title: "Needs Improvement", value: needsImprovement, icon: Clock },
-        {
-          title: "Avg Performance Score",
-          value: avgPerformanceScore,
-          icon: BarChart,
-        },
-      ],
-      metrics: {
-        totalEmployees,
-        excellentPerformers,
-        avgPerformanceScore,
-      },
-    };
+  // Load viewMode from localStorage on client side
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const storedViewMode = localStorage.getItem("kpiViewMode") as
+        | "table"
+        | "grid"
+        | "list";
+      if (storedViewMode) {
+        setViewMode(storedViewMode);
+      }
+    }
   }, []);
+
+  // Persist viewMode to localStorage
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("kpiViewMode", viewMode);
+    }
+  }, [viewMode]);
 
   // Debounced search handler
   const debouncedSearch = useMemo(
-    () =>
-      debounce((value: string) => {
-        setSearchTerm(value);
-      }, 300),
+    () => debounce((value: string) => setSearchTerm(value), 300),
     []
   );
 
-  // Handle search input change
   const handleSearchChange = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
@@ -136,7 +129,6 @@ const KPIPage: React.FC = () => {
     [debouncedSearch]
   );
 
-  // Reset all filters
   const resetFilters = useCallback(() => {
     setSearchInput("");
     setSearchTerm("");
@@ -148,56 +140,6 @@ const KPIPage: React.FC = () => {
       description: "All filters have been cleared.",
     });
   }, [toast]);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      if (!session?.user?.token) {
-        toast({
-          title: "Authentication Error",
-          description: "Authentication token missing. Please log in again.",
-          variant: "destructive",
-        });
-        router.push("/login");
-        return;
-      }
-
-      try {
-        setIsLoading(true);
-        const kpiData = await fetchEmployeeKPIs(session.user.token);
-        setKPIs(kpiData);
-
-        const { stats } = calculateKPIMetrics(kpiData);
-        setStats(stats);
-      } catch (error: any) {
-        console.error("Failed to fetch KPIs:", error);
-        toast({
-          title: "Error",
-          description: "Failed to load KPIs: " + error.message,
-          variant: "destructive",
-        });
-        setKPIs([]);
-        setStats([
-          { title: "Excellent Performers", value: 0, icon: CheckCircle },
-          { title: "Good Performers", value: 0, icon: Users },
-          { title: "Needs Improvement", value: 0, icon: Clock },
-          { title: "Avg Performance Score", value: 0, icon: BarChart },
-        ]);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (session) {
-      fetchData();
-    }
-  }, [session, router, toast, debouncedSearch, calculateKPIMetrics]);
-
-  const roles = session?.user?.roles
-    ? Array.isArray(session.user.roles)
-      ? session.user.roles
-      : [session.user.roles]
-    : [];
-  const isAdmin = roles.includes("ADMIN");
 
   const handleSort = useCallback(
     (field: keyof EmployeeKPI) => {
@@ -225,35 +167,6 @@ const KPIPage: React.FC = () => {
     [router]
   );
 
-  const handleDeleteKPI = useCallback(async () => {
-    if (!employeeToDelete || !session?.user?.token) return;
-
-    try {
-      await deleteKPI(employeeToDelete, session.user.token);
-      setKPIs((prev) =>
-        prev.filter((kpi) => kpi.employeeId !== employeeToDelete)
-      );
-      const { stats } = calculateKPIMetrics(
-        kpis.filter((kpi) => kpi.employeeId !== employeeToDelete)
-      );
-      setStats(stats);
-      toast({
-        title: "Success",
-        description: "KPI record deleted successfully.",
-      });
-    } catch (error: any) {
-      console.error("Failed to delete KPI:", error);
-      toast({
-        title: "Error",
-        description: "Failed to delete KPI: " + error.message,
-        variant: "destructive",
-      });
-    } finally {
-      setDeleteDialogOpen(false);
-      setEmployeeToDelete(null);
-    }
-  }, [employeeToDelete, session, toast, kpis, calculateKPIMetrics]);
-
   const sortedKPIs = useMemo(
     () => sortKPIs(kpis, sortField, sortDirection),
     [kpis, sortField, sortDirection]
@@ -263,20 +176,37 @@ const KPIPage: React.FC = () => {
     [sortedKPIs, searchTerm, filterStatus]
   );
 
-  // Calculate metrics for Quick Info
-  const { metrics } = useMemo(
-    () => calculateKPIMetrics(kpis),
-    [kpis, calculateKPIMetrics]
-  );
-
-  if (status === "loading") {
+  if (status === "loading" || isLoading) {
     return (
-      <div className="flex min-h-screen bg-background">
-        <div className="flex-1 flex flex-col">
-          <main className="p-4 sm:p-6 flex-1">
-            <Skeleton className="h-8 w-[200px] mb-6" />
-            <KPIStats stats={[]} isLoading={true} />
-          </main>
+      <div className="flex min-h-screen bg-background p-6">
+        <div className="flex-1 max-w-7xl mx-auto w-full">
+          <Skeleton className="h-8 w-[200px] mb-6" />
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
+            {[...Array(4)].map((_, i) => (
+              <Card key={i}>
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                  <Skeleton className="h-4 w-[100px]" />
+                  <Skeleton className="h-4 w-4 rounded-full" />
+                </CardHeader>
+                <CardContent>
+                  <Skeleton className="h-8 w-[60px]" />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+          <Card>
+            <CardHeader>
+              <Skeleton className="h-6 w-[150px]" />
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <Skeleton className="h-8 w-full" />
+                {[...Array(5)].map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </div>
     );
@@ -286,6 +216,13 @@ const KPIPage: React.FC = () => {
     router.push("/login");
     return null;
   }
+
+  const roles = session?.user?.roles
+    ? Array.isArray(session.user.roles)
+      ? session.user.roles
+      : [session.user.roles]
+    : [];
+  const isAdmin = roles.includes("ADMIN");
 
   if (!isAdmin) {
     toast({
@@ -298,9 +235,8 @@ const KPIPage: React.FC = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-background">
-      <div className="flex-1 flex flex-col max-w-7xl mx-auto w-full">
-        {/* Search and Actions */}
+    <div className="flex min-h-screen bg-background p-6">
+      <div className="flex-1 max-w-7xl mx-auto w-full">
         <Card className="sticky top-0 z-30 border-b border-border/50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <CardContent className="flex flex-col sm:flex-row items-center gap-4 p-4">
             <div className="relative w-full sm:w-auto flex-1">
@@ -310,8 +246,23 @@ const KPIPage: React.FC = () => {
                 value={searchInput}
                 onChange={handleSearchChange}
                 placeholder="Search employees..."
-                className="pl-8 w-full sm:w-[250px] lg:w-[350px]"
+                className="pl-8 pr-8 w-full sm:w-[250px] lg:w-[350px]"
+                aria-label="Search employee KPIs"
               />
+              {searchInput && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-2 top-2.5"
+                  onClick={() => {
+                    setSearchInput("");
+                    setSearchTerm("");
+                  }}
+                  aria-label="Clear search"
+                >
+                  <X className="h-4 w-4" />
+                </Button>
+              )}
             </div>
             <div className="flex items-center gap-2 w-full sm:w-auto justify-between sm:justify-end">
               <Button onClick={() => router.push("/protected/kpi/create")}>
@@ -339,32 +290,27 @@ const KPIPage: React.FC = () => {
             <h1 className="text-2xl sm:text-3xl font-bold text-foreground">
               Employee KPIs
             </h1>
-            <div className="flex gap-2">
-              <Button
-                variant={viewMode === "table" ? "default" : "ghost"}
-                size="icon"
-                onClick={() => setViewMode("table")}
-              >
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(value: "table" | "grid" | "list") =>
+                value && setViewMode(value)
+              }
+              className="flex gap-2"
+              aria-label="Select view mode"
+            >
+              <ToggleGroupItem value="table" aria-label="Table view">
                 <TableIcon className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "grid" ? "default" : "ghost"}
-                size="icon"
-                onClick={() => setViewMode("grid")}
-              >
+              </ToggleGroupItem>
+              <ToggleGroupItem value="grid" aria-label="Grid view">
                 <LayoutGrid className="h-4 w-4" />
-              </Button>
-              <Button
-                variant={viewMode === "list" ? "default" : "ghost"}
-                size="icon"
-                onClick={() => setViewMode("list")}
-              >
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="List view">
                 <List className="h-4 w-4" />
-              </Button>
-            </div>
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
 
-          {/* Quick Filters */}
           <Card className="mb-6">
             <CardContent className="flex flex-wrap gap-2 p-4">
               <Button
@@ -396,7 +342,7 @@ const KPIPage: React.FC = () => {
             </CardContent>
           </Card>
 
-          <KPIStats stats={stats} isLoading={isLoading} />
+          <MemoizedKPIStats stats={stats} isLoading={isLoading} />
 
           <div className="grid gap-4 md:grid-cols-2 mb-6">
             <Card>
@@ -428,9 +374,7 @@ const KPIPage: React.FC = () => {
                       <span className="text-sm text-muted-foreground">
                         Total Employees
                       </span>
-                      <span className="text-sm font-medium">
-                        {metrics.totalEmployees}
-                      </span>
+                      <span className="text-sm font-medium">{kpis.length}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between items-center">
@@ -438,7 +382,8 @@ const KPIPage: React.FC = () => {
                         Excellent
                       </span>
                       <span className="text-sm font-medium">
-                        {metrics.excellentPerformers}
+                        {stats.find((s) => s.title === "Excellent Performers")
+                          ?.value || 0}
                       </span>
                     </div>
                     <Separator />
@@ -447,7 +392,8 @@ const KPIPage: React.FC = () => {
                         Avg Score
                       </span>
                       <span className="text-sm font-medium">
-                        {metrics.avgPerformanceScore}
+                        {stats.find((s) => s.title === "Avg Performance Score")
+                          ?.value || 0}
                       </span>
                     </div>
                   </div>
@@ -464,45 +410,72 @@ const KPIPage: React.FC = () => {
               {isLoading ? (
                 <div className="space-y-4">
                   <Skeleton className="h-8 w-full" />
-                  <Skeleton className="h-32 w-full" />
+                  {[...Array(5)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
                 </div>
+              ) : filteredKPIs.length === 0 ? (
+                <p className="text-center">
+                  No employee KPIs found. Try adjusting your filters.
+                </p>
               ) : (
-                <>
+                <AnimatePresence mode="wait">
                   {viewMode === "table" && (
-                    <KPITable
-                      kpis={filteredKPIs}
-                      onSort={handleSort}
-                      onClick={handleKPIClick}
-                      onEdit={handleEditKPI}
-                      onDelete={(id) => {
-                        setEmployeeToDelete(id);
-                        setDeleteDialogOpen(true);
-                      }}
-                    />
+                    <motion.div
+                      key="table"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                    >
+                      <KPITable
+                        kpis={filteredKPIs}
+                        onSort={handleSort}
+                        onClick={handleKPIClick}
+                        onEdit={handleEditKPI}
+                        onDelete={(id) => {
+                          setEmployeeToDelete(id);
+                          setDeleteDialogOpen(true);
+                        }}
+                      />
+                    </motion.div>
                   )}
                   {viewMode === "grid" && (
-                    <KPIGrid
-                      kpis={filteredKPIs}
-                      onClick={handleKPIClick}
-                      onEdit={handleEditKPI}
-                      onDelete={(id) => {
-                        setEmployeeToDelete(id);
-                        setDeleteDialogOpen(true);
-                      }}
-                    />
+                    <motion.div
+                      key="grid"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                    >
+                      <KPIGrid
+                        kpis={filteredKPIs}
+                        onClick={handleKPIClick}
+                        onEdit={handleEditKPI}
+                        onDelete={(id) => {
+                          setEmployeeToDelete(id);
+                          setDeleteDialogOpen(true);
+                        }}
+                      />
+                    </motion.div>
                   )}
                   {viewMode === "list" && (
-                    <KPIList
-                      kpis={filteredKPIs}
-                      onClick={handleKPIClick}
-                      onEdit={handleEditKPI}
-                      onDelete={(id) => {
-                        setEmployeeToDelete(id);
-                        setDeleteDialogOpen(true);
-                      }}
-                    />
+                    <motion.div
+                      key="list"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                    >
+                      <KPIList
+                        kpis={filteredKPIs}
+                        onClick={handleKPIClick}
+                        onEdit={handleEditKPI}
+                        onDelete={(id) => {
+                          setEmployeeToDelete(id);
+                          setDeleteDialogOpen(true);
+                        }}
+                      />
+                    </motion.div>
                   )}
-                </>
+                </AnimatePresence>
               )}
             </CardContent>
           </Card>
@@ -511,7 +484,11 @@ const KPIPage: React.FC = () => {
         <DeleteDialog
           open={deleteDialogOpen}
           onOpenChange={setDeleteDialogOpen}
-          onConfirm={handleDeleteKPI}
+          onConfirm={() => {
+            if (employeeToDelete) deleteKPI(employeeToDelete);
+            setDeleteDialogOpen(false);
+            setEmployeeToDelete(null);
+          }}
         />
 
         <KPIReportDialog

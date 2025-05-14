@@ -29,7 +29,15 @@ export function KPIGrid({ kpis, onClick, onEdit, onDelete }: KPIGridProps) {
               <TooltipTrigger asChild>
                 <Card
                   onClick={() => onClick(kpi.employeeId)}
-                  className="cursor-pointer hover:shadow-lg transition-shadow"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      onClick(kpi.employeeId);
+                    }
+                  }}
+                  className="cursor-pointer hover:shadow-lg transition-shadow focus:outline-none focus:ring-2 focus:ring-primary"
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`View details for ${kpi.employeeName}`}
                 >
                   <CardHeader>
                     <CardTitle className="text-lg">
@@ -43,8 +51,8 @@ export function KPIGrid({ kpis, onClick, onEdit, onDelete }: KPIGridProps) {
                           kpi.status === "Excellent"
                             ? "secondary"
                             : kpi.status === "Good"
-                              ? "default"
-                              : "outline"
+                            ? "default"
+                            : "outline"
                         }
                       >
                         {kpi.status}
@@ -70,6 +78,7 @@ export function KPIGrid({ kpis, onClick, onEdit, onDelete }: KPIGridProps) {
                             e.stopPropagation();
                             onEdit(kpi.employeeId);
                           }}
+                          aria-label={`Edit KPI for ${kpi.employeeName}`}
                         >
                           <Edit className="mr-2 h-4 w-4" />
                           Edit
@@ -81,6 +90,7 @@ export function KPIGrid({ kpis, onClick, onEdit, onDelete }: KPIGridProps) {
                             e.stopPropagation();
                             onDelete(kpi.employeeId);
                           }}
+                          aria-label={`Delete KPI for ${kpi.employeeName}`}
                         >
                           <Trash2 className="mr-2 h-4 w-4" />
                           Delete

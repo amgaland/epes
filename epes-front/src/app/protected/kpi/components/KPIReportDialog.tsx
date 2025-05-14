@@ -1,11 +1,10 @@
 // src/app/protected/kpi/components/KPIReportDialog.tsx
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
@@ -16,7 +15,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ReportConfig, EmployeeKPI } from "../types";
+import { Label } from "@/components/ui/label";
+import DOMPurify from "dompurify";
+import { EmployeeKPI, ReportConfig } from "../types";
 
 interface KPIReportDialogProps {
   open: boolean;
@@ -35,25 +36,45 @@ export function KPIReportDialog({
   setConfig,
   onGenerate,
 }: KPIReportDialogProps) {
+  const [preview, setPreview] = useState<string | null>(null);
+
+  const handlePreview = () => {
+    const filteredKPIs =
+      config.employeeId === "all"
+        ? kpis
+        : kpis.filter((kpi) => kpi.employeeId === config.employeeId);
+    const previewContent = filteredKPIs
+      .map(
+        (kpi) => `
+          <div class="mb-4">
+            <h2 class="text-lg font-bold">${kpi.employeeName}</h2>
+            <p>Performance Score: ${kpi.performanceScore}</p>
+            <p>Status: ${kpi.status}</p>
+            <p>Task Completion: ${kpi.taskCompletionRate}%</p>
+            <p>Project Contribution: ${kpi.projectContribution}%</p>
+          </div>
+        `
+      )
+      .join("");
+    setPreview(previewContent);
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Generate Performance Report</DialogTitle>
-          <DialogDescription>
-            Configure the performance evaluation report settings.
-          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div>
-            <Label htmlFor="employee-select">Employee</Label>
+            <Label htmlFor="employeeId">Employee</Label>
             <Select
               value={config.employeeId}
               onValueChange={(value) =>
-                setConfig({ ...config, employeeId: value })
+                setConfig((prev) => ({ ...prev, employeeId: value }))
               }
             >
-              <SelectTrigger id="employee-select">
+              <SelectTrigger id="employeeId" aria-label="Select employee">
                 <SelectValue placeholder="Select employee" />
               </SelectTrigger>
               <SelectContent>
@@ -67,17 +88,14 @@ export function KPIReportDialog({
             </Select>
           </div>
           <div>
-            <Label htmlFor="period-select">Time Period</Label>
+            <Label htmlFor="period">Period</Label>
             <Select
               value={config.period}
               onValueChange={(value) =>
-                setConfig({
-                  ...config,
-                  period: value as ReportConfig["period"],
-                })
+                setConfig((prev) => ({ ...prev, period: value as any }))
               }
             >
-              <SelectTrigger id="period-select">
+              <SelectTrigger id="period" aria-label="Select period">
                 <SelectValue placeholder="Select period" />
               </SelectTrigger>
               <SelectContent>
@@ -89,48 +107,48 @@ export function KPIReportDialog({
           </div>
           <div className="space-y-2">
             <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="include-tasks"
+              <Checkbox
+                id="includeTasks"
                 checked={config.includeTasks}
-                onChange={(e) =>
-                  setConfig({ ...config, includeTasks: e.target.checked })
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => ({ ...prev, includeTasks: !!checked }))
                 }
               />
-              <Label htmlFor="include-tasks">Include Task Details</Label>
+              <Label htmlFor="includeTasks">Include Tasks</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="include-projects"
+              <Checkbox
+                id="includeProjects"
                 checked={config.includeProjects}
-                onChange={(e) =>
-                  setConfig({ ...config, includeProjects: e.target.checked })
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => ({ ...prev, includeProjects: !!checked }))
                 }
               />
-              <Label htmlFor="include-projects">Include Project Details</Label>
+              <Label htmlFor="includeProjects">Include Projects</Label>
             </div>
             <div className="flex items-center space-x-2">
-              <input
-                type="checkbox"
-                id="include-comments"
+              <Checkbox
+                id="includeComments"
                 checked={config.includeComments}
-                onChange={(e) =>
-                  setConfig({ ...config, includeComments: e.target.checked })
+                onCheckedChange={(checked) =>
+                  setConfig((prev) => ({ ...prev, includeComments: !!checked }))
                 }
               />
-              <Label htmlFor="include-comments">
-                Employee Performance Comments
-              </Label>
+              <Label htmlFor="includeComments">Include Comments</Label>
             </div>
           </div>
+          <div className="flex gap-2">
+            <Button onClick={handlePreview}>Preview Report</Button>
+            <Button onClick={onGenerate}>Generate PDF</Button>
+          </div>
+          {preview && (
+            <div
+              className="border p-4 max-h-[300px] overflow-auto"
+              dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(preview) }}
+              aria-label="Report preview"
+            />
+          )}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
-            Cancel
-          </Button>
-          <Button onClick={onGenerate}>Generate PDF Report</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
