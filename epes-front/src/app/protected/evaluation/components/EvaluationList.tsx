@@ -1,74 +1,31 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Edit, Trash } from "lucide-react";
-import { EmployeeEvaluation } from "../types";
+import { Evaluation } from "../types";
 
 interface EvaluationListProps {
-  evaluations: EmployeeEvaluation[];
-  onClick: (employeeId: string) => void;
-  onEdit: (employeeId: string) => void;
-  onDelete: (employeeId: string) => void;
+  evaluations: Evaluation[];
+  handleEvaluationClick: (evaluationId: string) => void;
 }
 
-export const EvaluationList: React.FC<EvaluationListProps> = ({
+export function EvaluationList({
   evaluations,
-  onClick,
-  onEdit,
-  onDelete,
-}) => {
+  handleEvaluationClick,
+}: EvaluationListProps) {
   return (
-    <div className="space-y-4">
-      {evaluations.map((evalItem) => (
-        <Card
-          key={evalItem.employeeId}
-          className="cursor-pointer hover:shadow-md transition-shadow"
-          onClick={() => onClick(evalItem.employeeId)}
+    <ul className="space-y-2">
+      {evaluations.map((evaluation) => (
+        <li
+          key={evaluation.id}
+          className="cursor-pointer hover:bg-muted/50 p-2 rounded"
+          onClick={() => handleEvaluationClick(evaluation.id)}
         >
-          <CardHeader>
-            <div className="flex justify-between items-center">
-              <CardTitle>{evalItem.name}</CardTitle>
-              <div className="flex gap-2">
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onEdit(evalItem.employeeId);
-                  }}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onDelete(evalItem.employeeId);
-                  }}
-                >
-                  <Trash className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <p className="text-sm">
-                <span className="font-medium">Feedback Score:</span>{" "}
-                {evalItem.averageFeedbackScore.toFixed(1)}
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">OKR Completion:</span>{" "}
-                {evalItem.okrCompletionRate}%
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">Status:</span>{" "}
-                {evalItem.overallStatus}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          <span className="font-medium">{evaluation.type}</span> - Employee:{" "}
+          {evaluation.employee_id}, Project: {evaluation.project_id || "-"},
+          Task: {evaluation.task_id || "-"}, Value:{" "}
+          {typeof evaluation.value === "string"
+            ? evaluation.value.slice(0, 50)
+            : evaluation.value}
+          , Date: {evaluation.date}
+        </li>
       ))}
-    </div>
+    </ul>
   );
-};
+}

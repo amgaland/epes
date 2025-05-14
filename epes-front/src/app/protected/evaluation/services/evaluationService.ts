@@ -5,8 +5,8 @@ export const fetchEmployeeEvaluations = async (
   recalculate: boolean = false
 ): Promise<EmployeeEvaluation[]> => {
   const url = recalculate
-    ? "/api/evaluations?recalculate=true"
-    : "/api/evaluations";
+    ? "/protected/evaluations?recalculate=true"
+    : "/evaluations";
   const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${token}`,

@@ -1,3 +1,5 @@
+import { LucideIcon } from "lucide-react";
+
 export interface FeedbackSource {
   peerScore: number; // Average score from peers (0-100)
   managerScore: number; // Score from direct manager (0-100)
@@ -31,16 +33,42 @@ export interface EmployeeEvaluation {
   lastUpdated: string; // ISO date string, e.g., "2025-05-13T17:56:00Z"
 }
 
-export interface EvaluationStat {
-  title: string; // e.g., "High Performers"
-  value: number | string; // e.g., 10 or "75%"
-  icon: React.ComponentType<{ className?: string }>; // Lucide icon component
-}
-
 export interface ReportConfig {
   employeeId: string;
   period: "allTime" | "lastQuarter" | "lastYear";
   includeFeedback: boolean;
   includeOKRs: boolean;
   includeComments: boolean;
+}
+
+export interface Evaluation {
+  [x: string]: any;
+  id: string;
+  employee_id: string;
+  type: "KPI" | "OKR" | "Feedback";
+  value: string | number; // Score for KPI, objective for OKR, comment for Feedback
+  description?: string;
+  date: string;
+}
+export interface EvaluationStat {
+  title: string;
+  value: number;
+  icon: LucideIcon;
+}
+
+export interface Project {
+  id: string;
+  name: string;
+  status: "Active" | "Pending" | "Completed";
+  dueDate: string;
+  teamSize: number;
+  progress?: number;
+  teamMembers?: { user_id: string; name: string; role_in_project: string }[];
+}
+export interface Task {
+  id: string;
+  title: string;
+  assigned_to_id: string;
+  status: string;
+  completion_score: number;
 }
